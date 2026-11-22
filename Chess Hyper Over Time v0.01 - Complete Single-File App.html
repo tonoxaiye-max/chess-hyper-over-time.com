@@ -1,0 +1,2637 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Hyper Over Time v0.01 | ChessHyperOverTime.com</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@500;700;900&family=Noto+Sans+KR:wght@500;700;900&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #161513;
+      --bg-surface: #22211e;
+      --bg-card: #2b2926;
+      --accent-green: #81b64c;
+      --accent-green-hover: #93ca5b;
+      --accent-green-shadow: #497622;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans Thai', 'Noto Sans JP', 'Noto Sans KR', 'Noto Sans SC', 'Inter', sans-serif;
+      background-color: var(--bg-base);
+      color: #f5f5f4;
+      overflow-x: hidden;
+      user-select: none;
+    }
+
+    .font-brand {
+      font-family: 'Cinzel', 'Inter', serif;
+    }
+
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn-green-3d {
+      background-color: var(--accent-green);
+      box-shadow: 0 4px 0 var(--accent-green-shadow);
+      transition: all 0.12s ease;
+    }
+    .btn-green-3d:hover {
+      background-color: var(--accent-green-hover);
+      transform: translateY(-1px);
+    }
+    .btn-green-3d:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 var(--accent-green-shadow);
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #141311; }
+    ::-webkit-scrollbar-thumb { background: #46433d; border-radius: 9999px; }
+
+    /* Board Themes */
+    .board-classic .sq-light { background-color: #ebecd0; color: #739552; }
+    .board-classic .sq-dark  { background-color: #739552; color: #ebecd0; }
+
+    .board-slate .sq-light { background-color: #cbd5e1; color: #334155; }
+    .board-slate .sq-dark  { background-color: #334155; color: #cbd5e1; }
+
+    .board-obsidian .sq-light { background-color: #9ca3af; color: #1f2937; }
+    .board-obsidian .sq-dark  { background-color: #1f2937; color: #9ca3af; }
+
+    /* Square Highlights */
+    .sq-selected { background-color: rgba(245, 246, 130, 0.88) !important; }
+    .sq-last-move { background-color: rgba(245, 246, 130, 0.48) !important; }
+    .sq-check {
+      background: radial-gradient(circle, rgba(239,68,68,0.95) 0%, rgba(185,28,28,0.75) 70%, transparent 100%) !important;
+    }
+
+    .hint-dot {
+      width: 30%;
+      height: 30%;
+      border-radius: 9999px;
+      background-color: rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+    }
+    .hint-capture {
+      width: 86%;
+      height: 86%;
+      border-radius: 9999px;
+      border: 5px solid rgba(0, 0, 0, 0.28);
+      pointer-events: none;
+    }
+
+    .chess-piece {
+      width: 85%;
+      height: 85%;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.4));
+    }
+    .chess-piece:active { transform: scale(1.07); }
+
+    /* Delta-Time Clocks (Explicit high-contrast states so no clock ever appears as an unstyled white block) */
+    .clock-box {
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.05rem;
+      line-height: 1.35rem;
+      font-weight: 800;
+      min-width: 112px;
+      text-align: right;
+      transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+    }
+    @media (min-width: 640px) {
+      .clock-box { font-size: 1.2rem; line-height: 1.5rem; min-width: 126px; }
+    }
+    .clock-active {
+      background-color: #f5f5f4;
+      color: #141413;
+      border: 1px solid #d6d3d1;
+    }
+    .clock-idle {
+      background-color: #181715;
+      color: #a8a29e;
+      border: 1px solid #35332e;
+    }
+    .clock-low {
+      background-color: #dc2626 !important;
+      color: #ffffff !important;
+      border-color: #f87171 !important;
+    }
+
+    .lobby-board-bg {
+      background-image:
+        linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.03) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.03) 75%);
+      background-size: 56px 56px;
+      background-position: 0 0, 0 28px, 28px -28px, -28px 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ==================== TOP BAR ==================== -->
+  <header class="sticky top-0 z-30 bg-[#1c1b18]/95 backdrop-blur border-b border-[#312f2a]">
+    <div class="max-w-6xl mx-auto px-3 sm:px-5 h-14 flex items-center justify-between gap-2">
+      <button type="button" onclick="navigateTo('home')" class="flex items-center gap-2.5 text-left min-w-0 group">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#2d4a6e] to-[#1b2e47] border border-sky-400/30 flex items-center justify-center shadow shrink-0 group-hover:scale-105 transition">
+          <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 22H5v-2h14v2M17.16 8.26A4.96 4.96 0 0 0 15 5c-1.56 0-2.97.72-3.88 1.84L9.5 5.22 8.08 6.64l1.15 1.15C8.47 8.85 8 10.12 8 11.5V14l-2 2v2h12v-2l-2-2v-2.5c0-.96-.28-1.85-.75-2.61l1.91-.63z"/>
+          </svg>
+        </div>
+        <div class="leading-tight truncate">
+          <div class="font-black text-xs sm:text-sm tracking-tight text-white truncate flex items-center gap-1.5">
+            <span>CHESS <span class="text-[#81b64c]">HYPER OVER TIME</span></span>
+            <span class="px-1.5 py-0.5 text-[10px] font-mono-num font-black rounded bg-[#81b64c]/20 text-[#81b64c] border border-[#81b64c]/40">v0.01</span>
+          </div>
+          <div class="text-[10px] font-bold text-amber-400 tracking-wide">
+            ChessHyperOverTime.com • OLL System
+          </div>
+        </div>
+      </button>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" id="soundToggleBtn" onclick="toggleSound()" class="w-9 h-9 rounded-xl bg-[#262522] hover:bg-[#32302c] border border-[#3a3833] flex items-center justify-center text-sm" title="Sound">
+          🔊
+        </button>
+        <button type="button" onclick="navigateTo('profile')" class="flex items-center gap-2 bg-[#262522] hover:bg-[#312f2b] border border-[#3a3833] px-2.5 py-1.5 rounded-xl transition">
+          <span id="hdrAvatar" class="text-base">⚡</span>
+          <div class="text-left leading-none">
+            <div class="flex items-center gap-1">
+              <span id="hdrUsername" class="text-xs font-extrabold text-white">Zero</span>
+              <span id="hdrPlayerId" class="text-[10px] font-mono-num text-sky-300">CHT-1001</span>
+            </div>
+            <div id="hdrOll" class="text-[10px] font-mono-num font-bold text-[#81b64c] mt-0.5">2420 OLL</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== VIEW 1: HOME LOBBY ==================== -->
+  <main id="viewHome" class="flex-1 flex flex-col items-center justify-center px-4 py-6 lobby-board-bg relative">
+    <div class="max-w-md w-full space-y-5 relative z-10">
+
+      <!-- Hero Crest Card -->
+      <div class="relative rounded-3xl bg-gradient-to-b from-[#23262b]/92 via-[#1d1c19]/92 to-[#181715]/95 border border-[#34332e] p-6 text-center shadow-2xl overflow-hidden">
+        <div class="absolute inset-0 opacity-15 pointer-events-none grid grid-cols-6 grid-rows-4">
+          <div class="bg-white/20"></div><div></div><div class="bg-white/20"></div><div></div><div class="bg-white/20"></div><div></div>
+          <div></div><div class="bg-white/20"></div><div></div><div class="bg-white/20"></div><div></div><div class="bg-white/20"></div>
+          <div class="bg-white/20"></div><div></div><div class="bg-white/20"></div><div></div><div class="bg-white/20"></div><div></div>
+          <div></div><div class="bg-white/20"></div><div></div><div class="bg-white/20"></div><div></div><div class="bg-white/20"></div>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center">
+          <div class="w-16 h-16 rounded-full bg-gradient-to-b from-[#335b8a] to-[#1a314d] border-2 border-sky-300/40 shadow-lg flex items-center justify-center mb-3">
+            <svg class="w-9 h-9 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 22H5v-2h14v2M17.16 8.26A4.96 4.96 0 0 0 15 5c-1.56 0-2.97.72-3.88 1.84L9.5 5.22 8.08 6.64l1.15 1.15C8.47 8.85 8 10.12 8 11.5V14l-2 2v2h12v-2l-2-2v-2.5c0-.96-.28-1.85-.75-2.61l1.91-.63z"/>
+            </svg>
+          </div>
+
+          <h1 class="font-brand text-2xl sm:text-3xl font-black tracking-wide text-white leading-tight">
+            CHESS HYPER<br><span class="text-[#81b64c]">OVER TIME</span>
+          </h1>
+
+          <div class="mt-4 pt-3 border-t border-white/10 w-full flex items-center justify-center gap-2 text-[11px] text-amber-300 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span id="devBuildStatusText">v0.01 • โหมดพัฒนาทดสอบ • ระบบบัญชี & ห้องจริง</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main 4 Menu Cards -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- 1. Play Online (Room Codes + BroadcastChannel + Random White/Black, Zero Bots) -->
+        <button type="button" onclick="openOnlineTimeModal()" class="bg-[#242830] hover:bg-[#2c313b] border border-[#383f4d] rounded-2xl p-4 text-left flex flex-col justify-between gap-3 shadow-lg transition active:scale-[0.98]">
+          <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-xl">
+            🌐
+          </div>
+          <div>
+            <div id="cardOnlineTitle" class="font-black text-sm text-white">เล่นออนไลน์</div>
+            <div id="cardOnlineDesc" class="text-[11px] text-stone-400 mt-0.5">สุ่มฝ่ายขาว/ดำ • ไม่ใส่บอท</div>
+          </div>
+        </button>
+
+        <!-- 2. Play vs Bot (White/Black/Random, No OLL Loss Deduction) -->
+        <button type="button" onclick="openBotSetupModal()" class="bg-[#242830] hover:bg-[#2c313b] border border-[#383f4d] rounded-2xl p-4 text-left flex flex-col justify-between gap-3 shadow-lg transition active:scale-[0.98]">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-xl">
+            🧠
+          </div>
+          <div>
+            <div id="cardBotTitle" class="font-black text-sm text-white">เล่นกับคอมพิวเตอร์</div>
+            <div id="cardBotDesc" class="text-[11px] text-stone-400 mt-0.5">เลือกฝั่งได้ • แพ้ไม่หัก OLL</div>
+          </div>
+        </button>
+
+        <!-- 3. Custom & Friend -->
+        <button type="button" onclick="navigateTo('custom')" class="bg-[#242830] hover:bg-[#2c313b] border border-sky-500/40 rounded-2xl p-4 text-left flex flex-col justify-between gap-3 shadow-lg transition active:scale-[0.98]">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/30 flex items-center justify-center text-xl">
+            🛠️
+          </div>
+          <div>
+            <div id="cardCustomTitle" class="font-black text-sm text-white">โหมด Custom & เพื่อน</div>
+            <div id="cardCustomDesc" class="text-[11px] text-amber-300/90 mt-0.5">ตั้งเวลาเอง • จัดวางหมากเอง</div>
+          </div>
+        </button>
+
+        <!-- 4. Profile & Account -->
+        <button type="button" onclick="navigateTo('profile')" class="bg-[#242830] hover:bg-[#2c313b] border border-[#383f4d] rounded-2xl p-4 text-left flex flex-col justify-between gap-3 shadow-lg transition active:scale-[0.98]">
+          <div class="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/30 flex items-center justify-center text-xl">
+            👤
+          </div>
+          <div>
+            <div id="cardProfileTitle" class="font-black text-sm text-white">โปรไฟล์ & สถิติ</div>
+            <div id="cardProfileDesc" class="text-[11px] text-stone-400 mt-0.5">ไอดีบัญชี • ประวัติและรางวัล</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- Bottom 2 Buttons: Ranking & Settings -->
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <button type="button" onclick="navigateTo('ranking')" class="bg-[#26466d] hover:bg-[#2f5685] border border-sky-400/30 text-white py-3.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.98]">
+          <span>📊</span>
+          <span id="btnRankingText">อันดับ (Ranking)</span>
+        </button>
+
+        <button type="button" onclick="openSettingsModal()" class="bg-[#26466d] hover:bg-[#2f5685] border border-sky-400/30 text-white py-3.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.98]">
+          <span>⚙️</span>
+          <span id="btnSettingsText">การตั้งค่า</span>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== VIEW 2: CUSTOM MODE & BOARD EDITOR ==================== -->
+  <section id="viewCustom" class="hidden flex-1 max-w-4xl w-full mx-auto px-3 sm:px-5 py-4 space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <button type="button" onclick="navigateTo('home')" class="w-9 h-9 rounded-xl bg-[#262522] hover:bg-[#33312c] border border-[#3a3833] text-white font-bold">←</button>
+        <div>
+          <h2 id="customHeaderTitle" class="text-base sm:text-lg font-black text-white">โหมด Custom & เล่นกับเพื่อน</h2>
+          <p id="customHeaderSub" class="text-xs text-stone-400">กำหนดเวลาได้อิสระ จัดวางตัวหมากบนกระดาน 64 ช่อง และเล่นกับเพื่อน</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+      <!-- 64-Square Board Editor -->
+      <div class="lg:col-span-6 bg-[#242320] p-3.5 rounded-2xl border border-[#383630] space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black text-amber-400">Board Editor (64 ช่อง)</span>
+          <div class="flex gap-1.5">
+            <button type="button" onclick="editorPreset('standard')" class="px-2 py-1 rounded-lg bg-[#32302b] hover:bg-[#3f3d37] text-[11px] font-bold text-white">มาตรฐาน</button>
+            <button type="button" onclick="editorPreset('kingsOnly')" class="px-2 py-1 rounded-lg bg-[#32302b] hover:bg-[#3f3d37] text-[11px] font-bold text-stone-300">เหลือคิง</button>
+          </div>
+        </div>
+
+        <div class="bg-[#181715] p-2 rounded-xl border border-[#32302b] space-y-1.5">
+          <div class="flex items-center justify-between gap-1" id="editorPaletteWhite"></div>
+          <div class="flex items-center justify-between gap-1" id="editorPaletteBlack"></div>
+        </div>
+
+        <div class="aspect-square w-full max-w-[380px] mx-auto bg-[#1b1a18] p-1.5 rounded-xl border border-[#3a3833]">
+          <div id="customEditorBoard" class="w-full h-full grid grid-cols-8 grid-rows-8 rounded-lg overflow-hidden board-classic"></div>
+        </div>
+
+        <div class="flex flex-wrap gap-1.5 text-[11px]">
+          <button type="button" onclick="editorPreset('queenOdds')" class="px-2.5 py-1 rounded-lg bg-[#181715] hover:bg-[#2f2d28] border border-[#383630] text-stone-300 font-semibold">ต่อควีน</button>
+          <button type="button" onclick="editorPreset('rookOdds')" class="px-2.5 py-1 rounded-lg bg-[#181715] hover:bg-[#2f2d28] border border-[#383630] text-stone-300 font-semibold">ต่อเรือ</button>
+          <button type="button" onclick="editorPreset('endgame')" class="px-2.5 py-1 rounded-lg bg-[#181715] hover:bg-[#2f2d28] border border-[#383630] text-stone-300 font-semibold">ฝึกท้ายเกม</button>
+        </div>
+      </div>
+
+      <!-- Custom Settings -->
+      <div class="lg:col-span-6 space-y-3.5">
+        <div class="bg-[#242320] p-4 rounded-2xl border border-[#383630] space-y-3">
+          <h3 class="text-sm font-black text-white">1. รูปแบบคู่แข่ง</h3>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button type="button" id="customOppFriendBtn" onclick="setCustomOpponentMode('friend')" class="p-3 rounded-xl border border-[#81b64c] bg-[#81b64c]/20 text-left">
+              <div class="text-lg mb-1">👥</div>
+              <div class="text-xs font-black text-white">เล่นกับเพื่อน</div>
+              <div class="text-[10px] text-stone-300">สลับฝั่งเล่นบนเครื่องเดียว</div>
+            </button>
+            <button type="button" id="customOppBotBtn" onclick="setCustomOpponentMode('bot')" class="p-3 rounded-xl border border-[#3a3833] bg-[#181715] text-left">
+              <div class="text-lg mb-1">🤖</div>
+              <div class="text-xs font-black text-white">สู้กับบอท</div>
+              <div class="text-[10px] text-stone-400">เริ่มจากกระดานที่จัดเอง</div>
+            </button>
+          </div>
+
+          <div id="customFriendPanel" class="bg-[#181715] p-3 rounded-xl border border-[#32302b] space-y-2.5 text-xs">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] text-stone-400 font-bold mb-1">ชื่อผู้เล่นฝั่งดำ</label>
+                <input id="customFriendNameInput" type="text" value="Friend_Player" maxlength="18" class="w-full bg-[#242320] text-white rounded-lg px-2.5 py-1.5 border border-[#3c3a34] focus:outline-none focus:border-[#81b64c]" />
+              </div>
+              <div>
+                <label class="block text-[11px] text-stone-400 font-bold mb-1">รหัสห้องเพื่อน</label>
+                <div class="flex gap-1">
+                  <input id="customRoomCodeInput" type="text" readonly class="w-full bg-[#242320] text-amber-300 font-mono-num font-bold rounded-lg px-2.5 py-1.5 border border-[#3c3a34]" />
+                  <button type="button" onclick="copyTextWithFeedback('customRoomCodeInput', 'customRoomCopyToast')" class="px-2.5 rounded-lg bg-[#34322d] hover:bg-[#44413b] text-white font-bold shrink-0">คัดลอก</button>
+                </div>
+              </div>
+            </div>
+            <div id="customRoomCopyToast" class="text-[11px] text-[#81b64c] hidden">คัดลอกรหัสห้องแล้ว</div>
+          </div>
+
+          <div id="customBotPanel" class="hidden bg-[#181715] p-3 rounded-xl border border-[#32302b] text-xs">
+            <label class="block text-[11px] text-stone-400 font-bold mb-1">เลือกระดับบอท</label>
+            <select id="customBotSelect" class="w-full bg-[#242320] text-white font-bold rounded-lg px-2.5 py-2 border border-[#3c3a34]"></select>
+          </div>
+        </div>
+
+        <div class="bg-[#242320] p-4 rounded-2xl border border-[#383630] space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-black text-white">2. กำหนดเวลาเอง</h3>
+            <label class="flex items-center gap-1.5 text-xs text-stone-300 cursor-pointer">
+              <input id="customUnlimitedTime" type="checkbox" onchange="toggleUnlimitedTime()" class="accent-[#81b64c] w-4 h-4 rounded" />
+              <span>ไม่จำกัดเวลา (∞)</span>
+            </label>
+          </div>
+
+          <div id="customTimeSliders" class="space-y-3 text-xs">
+            <div>
+              <div class="flex justify-between font-bold mb-1">
+                <span class="text-stone-300">เวลาตั้งต้น (นาที)</span>
+                <span id="customMinVal" class="font-mono-num text-[#81b64c]">5 นาที</span>
+              </div>
+              <input id="customMinRange" type="range" min="1" max="60" value="5" oninput="updateCustomTimeLabels()" class="w-full accent-[#81b64c]" />
+            </div>
+
+            <div>
+              <div class="flex justify-between font-bold mb-1">
+                <span class="text-stone-300">บวกเพิ่มต่อตา (วินาที)</span>
+                <span id="customIncVal" class="font-mono-num text-amber-400">+3 วินาที</span>
+              </div>
+              <input id="customIncRange" type="range" min="0" max="30" value="3" oninput="updateCustomTimeLabels()" class="w-full accent-amber-400" />
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] text-stone-400 font-bold mb-1">ฝั่งเริ่มเดินก่อน</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button type="button" id="turnWhiteBtn" onclick="setCustomFirstTurn('w')" class="py-2 rounded-xl bg-white text-black font-black">⬜ ขาวเดินก่อน</button>
+              <button type="button" id="turnBlackBtn" onclick="setCustomFirstTurn('b')" class="py-2 rounded-xl bg-[#181715] text-stone-300 border border-[#383630] font-bold">⬛ ดำเดินก่อน</button>
+            </div>
+          </div>
+
+          <div id="customValidationMsg" class="text-xs text-red-400 font-bold hidden"></div>
+
+          <button type="button" onclick="launchCustomMatch()" class="btn-green-3d w-full py-3 rounded-xl font-black text-sm text-white">
+            🚀 เริ่มเกมโหมด Custom
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== VIEW 3: CHESS ARENA ==================== -->
+  <section id="viewArena" class="hidden flex-1 max-w-6xl w-full mx-auto px-3 sm:px-5 py-3.5 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+    <div class="lg:col-span-7 flex flex-col gap-2.5 w-full max-w-[560px] mx-auto lg:max-w-none">
+      <!-- Top Bar (Opponent) -->
+      <div class="flex items-center justify-between bg-[#242320] px-3 py-2.5 rounded-xl border border-[#373530]">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div id="topAvatarBox" class="w-10 h-10 rounded-xl bg-[#32302b] border border-[#4a4740] flex items-center justify-center text-lg shrink-0">
+            ⚡
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span id="topTitleBadge" class="px-1.5 py-0.5 text-[10px] font-black rounded bg-rose-600 text-white uppercase">EMPEROR</span>
+              <span id="topNameText" class="font-extrabold text-sm text-white truncate">Opponent</span>
+              <span id="topOllText" class="text-xs font-mono-num text-stone-400">(3310 OLL)</span>
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span id="topSubText" class="text-[11px] text-amber-400 font-semibold truncate">3201–3375 • Emperor / Empress</span>
+              <span id="topCapturedText" class="text-xs text-stone-300 tracking-tighter"></span>
+            </div>
+          </div>
+        </div>
+        <div id="topClockBox" class="clock-box clock-idle">03:00.0</div>
+      </div>
+
+      <!-- Clean Board (Zero red overlay banners) -->
+      <div class="relative w-full aspect-square bg-[#1e1d1a] rounded-xl p-1.5 border border-[#3a3833] shadow-xl">
+        <div id="chessboard" class="w-full h-full grid grid-cols-8 grid-rows-8 rounded-lg overflow-hidden board-classic"></div>
+
+        <div id="promotionOverlay" class="hidden absolute inset-0 bg-black/75 z-20 flex items-center justify-center rounded-xl">
+          <div class="bg-[#262522] p-4 rounded-xl border border-[#4a4740] text-center shadow-2xl">
+            <div class="text-sm font-extrabold text-white mb-3">เลือกตัวหมากที่เลื่อนขั้น</div>
+            <div id="promotionChoices" class="flex gap-2.5"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Bar (Active Account Player) -->
+      <div class="flex items-center justify-between bg-[#242320] px-3 py-2.5 rounded-xl border border-[#373530]">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div id="botSideAvatarBox" class="w-10 h-10 rounded-xl bg-[#81b64c]/20 border border-[#81b64c]/50 flex items-center justify-center text-xl shrink-0">
+            ⚡
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span id="botSideTitleBadge" class="px-1.5 py-0.5 text-[10px] font-black rounded bg-red-600 text-white uppercase">IM</span>
+              <span id="botSideNameText" class="font-extrabold text-sm text-white truncate">Zero</span>
+              <span id="botSideOllText" class="text-xs font-mono-num text-[#81b64c] font-bold">(2420 OLL)</span>
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span id="botSideSubText" class="text-[11px] text-stone-300 font-medium truncate">2251–2600 • CM / FM / IM</span>
+              <span id="botSideCapturedText" class="text-xs text-stone-300 tracking-tighter"></span>
+            </div>
+          </div>
+        </div>
+        <div id="botSideClockBox" class="clock-box clock-active">03:00.0</div>
+      </div>
+    </div>
+
+    <!-- Side Panel -->
+    <aside class="lg:col-span-5 flex flex-col gap-3 w-full">
+      <div class="bg-[#242320] p-3.5 rounded-xl border border-[#373530] flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="arenaModeBadge" class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[11px] font-black">BLITZ 3+1</span>
+            <span id="arenaStatusBadge" class="px-2 py-0.5 rounded bg-[#81b64c]/20 text-[#81b64c] text-[11px] font-bold">พร้อมเดิน</span>
+            <span id="arenaRoomCodeBadge" class="hidden px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[11px] font-mono-num font-bold"></span>
+          </div>
+          <div id="arenaModeDesc" class="text-xs text-stone-400 mt-1 truncate">จับเวลา Delta Time แม่นยำ</div>
+        </div>
+        <button type="button" onclick="navigateTo('home')" class="px-3 py-2 rounded-xl bg-[#32302b] hover:bg-[#3f3d37] text-xs font-bold text-white shrink-0">
+          เมนูหลัก
+        </button>
+      </div>
+
+      <!-- CM / FM / IM Playstyle Analyzer -->
+      <div class="bg-[#242320] p-3.5 rounded-xl border border-[#373530] space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold text-stone-300">สไตล์การเล่น (2251–2600 OLL)</span>
+          <span id="styleBadgeText" class="text-[11px] font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-400">IM • ผสมผสาน</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-rose-400 font-bold">CM (เกมบุก)</span>
+              <span id="aggVal" class="font-mono-num text-stone-300">50%</span>
+            </div>
+            <div class="w-full h-1.5 bg-[#161513] rounded-full overflow-hidden">
+              <div id="aggBar" class="h-full bg-rose-500 transition-all duration-300" style="width: 50%"></div>
+            </div>
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="text-sky-400 font-bold">FM (เกมรับ)</span>
+              <span id="defVal" class="font-mono-num text-stone-300">50%</span>
+            </div>
+            <div class="w-full h-1.5 bg-[#161513] rounded-full overflow-hidden">
+              <div id="defBar" class="h-full bg-sky-500 transition-all duration-300" style="width: 50%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Move History -->
+      <div class="bg-[#242320] rounded-xl border border-[#373530] flex flex-col h-52 overflow-hidden">
+        <div class="px-3.5 py-2 border-b border-[#32302b] flex items-center justify-between text-xs font-bold text-stone-400">
+          <span>บันทึกตาเดิน</span>
+          <span id="moveCounterLabel" class="font-mono-num">ตาที่ 1</span>
+        </div>
+        <div id="moveHistoryBox" class="flex-1 overflow-y-auto p-2 font-mono-num text-xs">
+          <div class="text-stone-500 text-center py-8">เริ่มเดินหมากบนกระดาน</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="grid grid-cols-4 gap-2">
+        <button type="button" onclick="flipBoardView()" class="bg-[#242320] hover:bg-[#312f2b] border border-[#383630] text-stone-200 py-2.5 rounded-xl text-xs font-bold">
+          🔄 กลับด้าน
+        </button>
+        <button type="button" onclick="undoTurn()" class="bg-[#242320] hover:bg-[#312f2b] border border-[#383630] text-stone-200 py-2.5 rounded-xl text-xs font-bold">
+          ↩️ ย้อนตา
+        </button>
+        <button type="button" onclick="restartCurrentArena()" class="bg-[#242320] hover:bg-[#312f2b] border border-[#383630] text-stone-200 py-2.5 rounded-xl text-xs font-bold">
+          🔁 เริ่มใหม่
+        </button>
+        <button type="button" onclick="resignMatch()" class="bg-red-950/60 hover:bg-red-900/70 border border-red-800/50 text-red-300 py-2.5 rounded-xl text-xs font-bold">
+          🏳️ ยอมแพ้
+        </button>
+      </div>
+    </aside>
+  </section>
+
+  <!-- ==================== VIEW 4: RANKING (15 TIERS + LOCAL ACCOUNTS) ==================== -->
+  <section id="viewRanking" class="hidden flex-1 max-w-3xl w-full mx-auto px-3 sm:px-5 py-4 space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <button type="button" onclick="navigateTo('home')" class="w-9 h-9 rounded-xl bg-[#262522] hover:bg-[#33312c] border border-[#3a3833] text-white font-bold">←</button>
+        <div>
+          <h2 class="text-base sm:text-lg font-black text-white">ระบบจัดอันดับ OLL (15 ลำดับขั้น)</h2>
+          <p class="text-xs text-stone-400">หน่วยคะแนน OLL • ไม่มีคำนำหน้า W • v0.01</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 bg-[#1e1d1a] p-1 rounded-xl border border-[#33312c]">
+      <button type="button" id="rankTabTiers" onclick="switchRankSubTab('tiers')" class="py-2 rounded-lg text-xs font-black bg-[#81b64c] text-white">
+        📈 โครงสร้าง 15 ระดับขั้น
+      </button>
+      <button type="button" id="rankTabLeader" onclick="switchRankSubTab('leader')" class="py-2 rounded-lg text-xs font-bold text-stone-300">
+        👤 อันดับบัญชีในเครื่อง
+      </button>
+    </div>
+
+    <div id="rankPanelTiers" class="bg-[#242320] rounded-2xl border border-[#383630] p-4 space-y-2">
+      <div class="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-2">
+        <strong>2251–2600 OLL (CM / FM / IM):</strong> <strong>CM</strong> = เกมบุก/แท็กติก • <strong>FM</strong> = เกมรับ/ตำแหน่ง • <strong>IM</strong> = ผสมผสานทั้ง 2 แบบ (ไม่มีคำนำหน้า W ทุกตำแหน่ง)
+      </div>
+      <div id="tiers15List" class="space-y-1.5"></div>
+    </div>
+
+    <div id="rankPanelLeader" class="hidden bg-[#242320] rounded-2xl border border-[#383630] p-4 space-y-2.5">
+      <div class="text-[11px] text-stone-400 pb-1 border-b border-[#32302b]">
+        เรียงตามคะแนน OLL ของบัญชีผู้เล่นที่สร้างไว้ในเครื่องนี้
+      </div>
+      <div id="leaderboardList" class="space-y-2"></div>
+    </div>
+  </section>
+
+  <!-- ==================== VIEW 5: PROFILE, ACCOUNT & PLAYER ID ==================== -->
+  <section id="viewProfile" class="hidden flex-1 max-w-2xl w-full mx-auto px-3 sm:px-5 py-4 space-y-4">
+    <div class="bg-[#242320] rounded-2xl border border-[#383630] overflow-hidden shadow-lg">
+      <div class="h-24 bg-gradient-to-r from-[#26466d] via-[#22211e] to-[#344925] relative border-b border-[#34322d]">
+        <button type="button" onclick="navigateTo('home')" class="absolute top-3 left-3 w-9 h-9 rounded-full bg-[#181715]/85 hover:bg-[#181715] text-white flex items-center justify-center border border-[#3d3b36]">←</button>
+        <button type="button" onclick="openEditProfileModal()" class="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-[#181715]/85 hover:bg-[#181715] text-xs font-bold text-white border border-[#3d3b36]">✏️ แก้ไขบัญชี</button>
+      </div>
+
+      <div class="px-4 pb-4">
+        <div class="flex items-end justify-between -mt-10 mb-3">
+          <div class="relative">
+            <div id="profileAvatarLarge" class="w-20 h-20 rounded-2xl bg-[#312f2b] border-4 border-[#242320] flex items-center justify-center text-4xl shadow-lg">⚡</div>
+            <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#81b64c] border-2 border-[#242320]"></span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span id="profilePlayerIdBadge" class="px-2.5 py-1 rounded-xl bg-sky-500/15 border border-sky-400/30 text-sky-300 font-mono-num text-xs font-black">CHT-1001</span>
+            <button type="button" onclick="navigateTo('ranking')" class="bg-[#32302b] hover:bg-[#3f3d37] text-white text-xs font-extrabold px-3 py-1.5 rounded-xl border border-[#4a4740]">
+              📊 15 ระดับ OLL
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 id="profileUsernameDisplay" class="text-xl font-black text-white">Zero</h2>
+          <span id="profileTitleBadge" class="px-2 py-0.5 text-[11px] font-black rounded bg-red-600 text-white uppercase">IM</span>
+          <span id="profileTierPill" class="px-2 py-0.5 text-[11px] font-bold rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">CM / FM / IM</span>
+        </div>
+        <p id="profileTaglineDisplay" class="text-xs text-stone-400 mt-1">บัญชีผู้เล่น v0.01 • ข้อมูลแยกตามไอดีในเครื่อง</p>
+
+        <!-- Account Switcher & Create Account Bar -->
+        <div class="mt-3 pt-3 border-t border-[#32302b] flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-2 flex-1 min-w-[180px]">
+            <span class="text-stone-400 font-bold shrink-0">สลับบัญชี:</span>
+            <select id="accountSwitcherSelect" onchange="switchActiveAccount(this.value)" class="w-full bg-[#181715] text-white font-bold rounded-lg px-2.5 py-1.5 border border-[#3c3a34]"></select>
+          </div>
+          <button type="button" onclick="openCreateAccountModal()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-black shrink-0">
+            + สร้างบัญชีใหม่
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-2.5">
+      <div class="bg-[#2c281e] border border-[#494028] rounded-xl p-3 text-center">
+        <div class="text-2xl mb-1">🔥</div>
+        <div id="statStreakDays" class="text-base font-black font-mono-num text-amber-300">1 วัน</div>
+        <div class="text-[11px] text-stone-300 font-semibold">สตรีคเล่น</div>
+      </div>
+      <div class="bg-[#242320] border border-[#383630] rounded-xl p-3 text-center">
+        <div class="text-2xl mb-1">⚔️</div>
+        <div id="statRecordSummary" class="text-base font-black font-mono-num text-white">0W - 0L</div>
+        <div class="text-[11px] text-stone-400 font-semibold">สถิติรวม</div>
+      </div>
+      <div class="bg-[#28231d] border border-[#473b29] rounded-xl p-3 text-center">
+        <div class="text-2xl mb-1">🏆</div>
+        <div id="statPeakOll" class="text-base font-black font-mono-num text-amber-400">2420</div>
+        <div class="text-[11px] text-stone-300 font-semibold">OLL สูงสุด</div>
+      </div>
+    </div>
+
+    <div class="bg-[#242320] rounded-2xl border border-[#383630] p-4 flex items-center justify-between gap-3">
+      <div>
+        <div class="text-xs text-stone-400 font-bold">เรตติ้ง OLL ปัจจุบัน</div>
+        <div id="profileCurrentOll" class="text-2xl font-black font-mono-num text-white mt-0.5">2420 <span class="text-xs text-[#81b64c]">OLL</span></div>
+        <div id="profileCurrentTierDetail" class="text-xs text-amber-400 font-semibold mt-0.5">ช่วง 2251–2600 • CM / FM / IM</div>
+      </div>
+      <button type="button" onclick="openBotSetupModal()" class="btn-green-3d px-4 py-2.5 rounded-xl text-xs font-black text-white">
+        แข่งกับบอท
+      </button>
+    </div>
+
+    <!-- Awards Grid -->
+    <div class="bg-[#242320] rounded-2xl border border-[#383630] p-4 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-black text-white">รางวัลความสำเร็จ (Awards)</h3>
+        <span id="awardsUnlockedCount" class="text-[11px] font-mono-num text-amber-400 font-bold">0 / 4</span>
+      </div>
+      <div id="awardsListGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+    </div>
+
+    <div class="bg-[#242320] rounded-2xl border border-[#383630] p-4 space-y-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <h3 class="text-sm font-black text-white">ประวัติการแข่งขัน</h3>
+          <span id="historyCountBadge" class="px-2 py-0.5 text-[11px] font-bold font-mono-num rounded-full bg-[#35332e] text-stone-300">0</span>
+        </div>
+        <button type="button" onclick="clearHistoryData()" class="text-[11px] text-stone-400 hover:text-red-400 font-semibold">ล้างประวัติ</button>
+      </div>
+      <div id="gameHistoryList" class="space-y-2"></div>
+    </div>
+  </section>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- MODAL 1: ONLINE ROOMS & 12 TIME CONTROLS (RANDOM SIDE, NO BOTS) -->
+  <div id="onlineTimeModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-[#242320] border border-[#46433d] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-black text-white">เล่นออนไลน์ (สุ่มฝ่ายขาว/ดำ)</h3>
+          <p class="text-[11px] text-sky-300 font-semibold">ระบบห้องรหัสจริง • ซิงก์ข้ามหน้าต่าง • ไม่ใส่บอท</p>
+        </div>
+        <button type="button" onclick="closeModal('onlineTimeModal')" class="w-8 h-8 rounded-lg bg-[#32302b] text-white font-bold">✕</button>
+      </div>
+
+      <!-- Join Existing Room by Code -->
+      <div class="bg-[#181715] border border-[#36342e] rounded-xl p-3 space-y-2 text-xs">
+        <div class="font-bold text-amber-300">เข้าร่วมห้องด้วยรหัส (Join Room)</div>
+        <div class="flex gap-2">
+          <input id="joinRoomCodeInput" type="text" placeholder="เช่น ROOM-8421" maxlength="14" class="flex-1 bg-[#242320] text-white font-mono-num uppercase font-bold rounded-lg px-2.5 py-1.5 border border-[#3c3a34]" />
+          <button type="button" onclick="joinRoomByCode()" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-black shrink-0">เข้าห้อง</button>
+        </div>
+        <div id="joinRoomErrMsg" class="text-[11px] text-red-400 hidden"></div>
+      </div>
+
+      <!-- Bullet -->
+      <div class="space-y-1.5">
+        <div class="text-xs font-black text-amber-400">🚀 Bullet (สร้างห้องใหม่)</div>
+        <div class="grid grid-cols-4 gap-2 text-xs">
+          <button type="button" onclick="startOnlineRoom('Bullet 1 นาที', 60, 0)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">1 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Bullet 1+1 นาที', 60, 1)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">1+1 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Bullet 2 นาที', 120, 0)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">2 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Bullet 2+1 นาที', 120, 1)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">2+1 นาที</button>
+        </div>
+      </div>
+
+      <!-- Blitz -->
+      <div class="space-y-1.5">
+        <div class="text-xs font-black text-yellow-400">⚡ Blitz (สร้างห้องใหม่)</div>
+        <div class="grid grid-cols-4 gap-2 text-xs">
+          <button type="button" onclick="startOnlineRoom('Blitz 3 นาที', 180, 0)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">3 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Blitz 3+1 นาที', 180, 1)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">3+1 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Blitz 3+2 นาที', 180, 2)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">3+2 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Blitz 5 นาที', 300, 0)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">5 นาที</button>
+        </div>
+      </div>
+
+      <!-- Rapid -->
+      <div class="space-y-1.5">
+        <div class="text-xs font-black text-emerald-400">⏱️ Rapid (สร้างห้องใหม่)</div>
+        <div class="grid grid-cols-4 gap-2 text-xs">
+          <button type="button" onclick="startOnlineRoom('Rapid 10 นาที', 600, 0)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">10 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Rapid 15 นาที', 900, 0)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">15 นาที</button>
+          <button type="button" onclick="startOnlineRoom('Rapid 15+10 นาที', 900, 10)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">15+10</button>
+          <button type="button" onclick="startOnlineRoom('Rapid 30 นาที', 1800, 0)" class="py-2.5 rounded-xl bg-[#181715] hover:bg-[#81b64c] hover:text-white border border-[#383630] font-bold">30 นาที</button>
+        </div>
+      </div>
+
+      <div class="bg-[#181715] border border-[#36342e] rounded-xl p-3 text-[11px] text-stone-300 space-y-1">
+        <div class="font-bold text-amber-300">กติกาห้องออนไลน์ v0.01</div>
+        <div>สุ่มฝ่ายขาวหรือดำเมื่อเปิดห้อง ส่งรหัสห้องให้ผู้เล่นอีกฝั่งเข้าจอยได้ทันที และไม่มีบอทเข้าไปแทนผู้เล่น</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: BOT SETUP (WHITE / BLACK / RANDOM + NO OLL LOSS DEDUCTION) -->
+  <div id="botSetupModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-[#242320] border border-[#46433d] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-black text-white">เล่นกับคอมพิวเตอร์ (Bot OLL)</h3>
+          <p class="text-[11px] text-[#81b64c] font-semibold">แพ้หรือเสมอไม่หักแต้ม OLL • ชนะได้บวกแต้ม OLL</p>
+        </div>
+        <button type="button" onclick="closeModal('botSetupModal')" class="w-8 h-8 rounded-lg bg-[#32302b] text-white font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">เลือกฝั่งของคุณ</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" id="sideBtnWhite" onclick="setBotSidePref('w')" class="py-2.5 rounded-xl bg-white text-black font-black">⬜ ขาว</button>
+            <button type="button" id="sideBtnBlack" onclick="setBotSidePref('b')" class="py-2.5 rounded-xl bg-[#181715] text-stone-300 border border-[#383630] font-bold">⬛ ดำ</button>
+            <button type="button" id="sideBtnRandom" onclick="setBotSidePref('random')" class="py-2.5 rounded-xl bg-[#181715] text-stone-300 border border-[#383630] font-bold">🎲 สุ่ม</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">เลือกระดับบอท (0 – 3580 OLL)</label>
+          <select id="botModalSelect" class="w-full bg-[#181715] text-white font-bold rounded-xl px-3 py-2.5 border border-[#3c3a34]"></select>
+        </div>
+
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">กติกาเวลา</label>
+          <select id="botTimeSelect" class="w-full bg-[#181715] text-white font-bold rounded-xl px-3 py-2.5 border border-[#3c3a34]">
+            <optgroup label="Bullet">
+              <option value="Bullet 1 นาที|60|0">Bullet • 1 นาที</option>
+              <option value="Bullet 1+1 นาที|60|1">Bullet • 1+1 นาที</option>
+              <option value="Bullet 2 นาที|120|0">Bullet • 2 นาที</option>
+              <option value="Bullet 2+1 นาที|120|1">Bullet • 2+1 นาที</option>
+            </optgroup>
+            <optgroup label="Blitz">
+              <option value="Blitz 3 นาที|180|0">Blitz • 3 นาที</option>
+              <option value="Blitz 3+1 นาที|180|1" selected>Blitz • 3+1 นาที</option>
+              <option value="Blitz 3+2 นาที|180|2">Blitz • 3+2 นาที</option>
+              <option value="Blitz 5 นาที|300|0">Blitz • 5 นาที</option>
+            </optgroup>
+            <optgroup label="Rapid">
+              <option value="Rapid 10 นาที|600|0">Rapid • 10 นาที</option>
+              <option value="Rapid 15 นาที|900|0">Rapid • 15 นาที</option>
+              <option value="Rapid 15+10 นาที|900|10">Rapid • 15+10 นาที</option>
+              <option value="Rapid 30 นาที|1800|0">Rapid • 30 นาที</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" onclick="launchBotMatchFromModal()" class="btn-green-3d w-full py-3 rounded-xl font-black text-sm text-white">
+        ⚔️ เริ่มแข่งกับบอท
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: SETTINGS (11 LANGUAGES + BOARD + SOUND) -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-[#242320] border border-[#46433d] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 id="settingsTitleLabel" class="text-base font-black text-white">การตั้งค่า (Settings)</h3>
+        <button type="button" onclick="closeModal('settingsModal')" class="w-8 h-8 rounded-lg bg-[#32302b] text-white font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label id="langSelectLabel" class="block text-stone-400 font-bold mb-1.5">ภาษา (11 Languages)</label>
+          <div id="languageGrid" class="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto pr-1"></div>
+        </div>
+
+        <div>
+          <label class="block text-stone-400 font-bold mb-1.5">ธีมกระดาน</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="setBoardTheme('classic')" class="py-2 rounded-xl bg-[#739552] text-white font-black">คลาสสิก</button>
+            <button type="button" onclick="setBoardTheme('slate')" class="py-2 rounded-xl bg-[#334155] text-white font-black">สเลท</button>
+            <button type="button" onclick="setBoardTheme('obsidian')" class="py-2 rounded-xl bg-[#1f2937] text-white font-black border border-stone-600">ออบซิเดียน</button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between bg-[#181715] p-3 rounded-xl border border-[#32302b]">
+          <span class="font-bold text-stone-200">เสียงเอฟเฟกต์</span>
+          <button type="button" id="settingsSoundBtn" onclick="toggleSound()" class="px-3 py-1.5 rounded-lg bg-[#81b64c] text-white font-black">เปิดอยู่</button>
+        </div>
+      </div>
+
+      <button type="button" onclick="closeModal('settingsModal')" class="w-full py-2.5 rounded-xl bg-[#32302b] text-white font-bold text-xs">
+        ปิดหน้าต่าง
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 4: GAME OVER -->
+  <div id="gameOverModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-[#242320] border border-[#46433d] rounded-2xl max-w-sm w-full p-5 text-center space-y-4 shadow-2xl">
+      <div id="resBadge" class="inline-block px-3 py-1 rounded-full text-xs font-black bg-[#81b64c]/20 text-[#81b64c]">จบเกม</div>
+      <h3 id="resTitle" class="text-2xl font-black text-white">รุกฆาตสำเร็จ!</h3>
+      <p id="resDesc" class="text-xs text-stone-400">บันทึกผลเรียบร้อย</p>
+
+      <div id="resOllBox" class="bg-[#181715] rounded-xl p-3.5 border border-[#32302b] flex items-center justify-around">
+        <div>
+          <div class="text-[11px] text-stone-400 font-bold">OLL ปัจจุบัน</div>
+          <div id="resNewOll" class="text-xl font-black font-mono-num text-white mt-0.5">2420</div>
+        </div>
+        <div class="h-8 w-[1px] bg-[#32302b]"></div>
+        <div>
+          <div class="text-[11px] text-stone-400 font-bold">ผลต่าง OLL</div>
+          <div id="resDeltaOll" class="text-xl font-black font-mono-num text-[#81b64c] mt-0.5">+0 OLL</div>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button type="button" onclick="closeModal('gameOverModal'); navigateTo('home');" class="flex-1 py-2.5 rounded-xl bg-[#32302b] hover:bg-[#3f3d37] text-white font-bold text-xs">
+          เมนูหลัก
+        </button>
+        <button type="button" onclick="closeModal('gameOverModal'); restartCurrentArena();" class="flex-1 btn-green-3d py-2.5 rounded-xl text-white font-black text-xs">
+          เล่นอีกครั้ง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: EDIT ACTIVE ACCOUNT -->
+  <div id="editProfileModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-[#242320] border border-[#46433d] rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-black text-white">แก้ไขบัญชีผู้เล่น</h3>
+          <p id="editAccountIdLabel" class="text-[11px] font-mono-num text-sky-300">CHT-1001</p>
+        </div>
+        <button type="button" onclick="closeModal('editProfileModal')" class="w-8 h-8 rounded-lg bg-[#32302b] text-white font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">ชื่อบัญชี</label>
+          <input id="inputNickname" type="text" maxlength="20" class="w-full bg-[#181715] text-white rounded-xl px-3 py-2 border border-[#3c3a34]" />
+        </div>
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">คำอธิบาย</label>
+          <input id="inputTagline" type="text" maxlength="65" class="w-full bg-[#181715] text-white rounded-xl px-3 py-2 border border-[#3c3a34]" />
+        </div>
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">อวาตาร์</label>
+          <div id="avatarPickerGrid" class="grid grid-cols-6 gap-2"></div>
+        </div>
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">คะแนน OLL (0–4000)</label>
+          <input id="inputOllRating" type="number" min="0" max="4000" class="w-full bg-[#181715] text-white font-mono-num rounded-xl px-3 py-2 border border-[#3c3a34]" />
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="closeModal('editProfileModal')" class="flex-1 py-2.5 rounded-xl bg-[#32302b] text-stone-200 font-bold text-xs">ยกเลิก</button>
+        <button type="button" onclick="saveProfileChanges()" class="flex-1 btn-green-3d py-2.5 rounded-xl text-white font-black text-xs">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: CREATE NEW ACCOUNT (GENERATES UNIQUE CHT-XXXX ID) -->
+  <div id="createAccountModal" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+    <div class="bg-[#242320] border border-[#46433d] rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-black text-white">สร้างบัญชีผู้เล่นใหม่</h3>
+          <p class="text-[11px] text-sky-300">ระบบจะออกไอดีบัญชี CHT-XXXX อัตโนมัติ</p>
+        </div>
+        <button type="button" onclick="closeModal('createAccountModal')" class="w-8 h-8 rounded-lg bg-[#32302b] text-white font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">ชื่อผู้เล่น</label>
+          <input id="newAccountNameInput" type="text" placeholder="เช่น Zero_Pro" maxlength="20" class="w-full bg-[#181715] text-white rounded-xl px-3 py-2 border border-[#3c3a34]" />
+        </div>
+        <div>
+          <label class="block text-stone-400 font-bold mb-1">คะแนน OLL เริ่มต้น</label>
+          <input id="newAccountOllInput" type="number" min="0" max="4000" value="1200" class="w-full bg-[#181715] text-white font-mono-num rounded-xl px-3 py-2 border border-[#3c3a34]" />
+        </div>
+        <div id="createAccountErr" class="text-[11px] text-red-400 hidden"></div>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="closeModal('createAccountModal')" class="flex-1 py-2.5 rounded-xl bg-[#32302b] text-stone-200 font-bold text-xs">ยกเลิก</button>
+        <button type="button" onclick="createNewAccount()" class="flex-1 btn-green-3d py-2.5 rounded-xl text-white font-black text-xs">สร้างไอดี</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. 11-LANGUAGE DICTIONARY (TH, EN, ES, FR, ZH, RU, IT, JA, DE, KO, PT)
+    // =========================================================================
+    const LANGUAGES = [
+      { code: "th", flag: "🇹🇭", label: "ไทย" },
+      { code: "en", flag: "🇬🇧", label: "English" },
+      { code: "es", flag: "🇪🇸", label: "Español" },
+      { code: "fr", flag: "🇫🇷", label: "Français" },
+      { code: "zh", flag: "🇨🇳", label: "中文" },
+      { code: "ru", flag: "🇷🇺", label: "Русский" },
+      { code: "it", flag: "🇮🇹", label: "Italiano" },
+      { code: "ja", flag: "🇯🇵", label: "日本語" },
+      { code: "de", flag: "🇩🇪", label: "Deutsch" },
+      { code: "ko", flag: "🇰🇷", label: "한국어" },
+      { code: "pt", flag: "🇵🇹", label: "Português" }
+    ];
+
+    const I18N = {
+      th: {
+        devStatus: "v0.01 • โหมดพัฒนาทดสอบ • ระบบบัญชี & ห้องจริง",
+        onlineTitle: "เล่นออนไลน์", onlineDesc: "สุ่มฝ่ายขาว/ดำ • ไม่ใส่บอท",
+        botTitle: "เล่นกับคอมพิวเตอร์", botDesc: "เลือกฝั่งได้ • แพ้ไม่หัก OLL",
+        customTitle: "โหมด Custom & เพื่อน", customDesc: "ตั้งเวลาเอง • จัดวางหมากเอง",
+        profileTitle: "โปรไฟล์ & สถิติ", profileDesc: "ไอดีบัญชี • ประวัติและรางวัล",
+        rankingBtn: "อันดับ (Ranking)", settingsBtn: "การตั้งค่า",
+        settingsModalTitle: "การตั้งค่า (Settings)", langLabel: "ภาษา (11 Languages)"
+      },
+      en: {
+        devStatus: "v0.01 • Dev / Test Build • Accounts & Live Rooms",
+        onlineTitle: "Play Online", onlineDesc: "Random Side • Zero Bots",
+        botTitle: "Play vs Bot", botDesc: "Pick Side • No OLL Loss Penalty",
+        customTitle: "Custom & Friend", customDesc: "Custom Clock • Board Editor",
+        profileTitle: "Profile & Account", profileDesc: "Player ID • History & Awards",
+        rankingBtn: "Ranking", settingsBtn: "Settings",
+        settingsModalTitle: "Settings", langLabel: "Language (11 Languages)"
+      },
+      es: {
+        devStatus: "v0.01 • Compilación Dev/Prueba • Cuentas y Salas",
+        onlineTitle: "Jugar Online", onlineDesc: "Bando Aleatorio • Sin Bots",
+        botTitle: "Jugar vs Bot", botDesc: "Elige Bando • Sin Penalización OLL",
+        customTitle: "Custom y Amigo", customDesc: "Reloj Libre • Editor 64 Casillas",
+        profileTitle: "Perfil y Cuenta", profileDesc: "ID Jugador • Historial y Logros",
+        rankingBtn: "Ranking", settingsBtn: "Ajustes",
+        settingsModalTitle: "Ajustes", langLabel: "Idioma (11 Idiomas)"
+      },
+      fr: {
+        devStatus: "v0.01 • Version Dev/Test • Comptes et Salons",
+        onlineTitle: "Jouer en Ligne", onlineDesc: "Camp Aléatoire • Sans Bots",
+        botTitle: "Jouer vs Bot", botDesc: "Choix du Camp • Sans Perte OLL",
+        customTitle: "Custom & Ami", customDesc: "Horloge Libre • Éditeur 64 Cases",
+        profileTitle: "Profil & Compte", profileDesc: "ID Joueur • Historique et Prix",
+        rankingBtn: "Classement", settingsBtn: "Paramètres",
+        settingsModalTitle: "Paramètres", langLabel: "Langue (11 Langues)"
+      },
+      zh: {
+        devStatus: "v0.01 • 开发测试版 • 玩家账号与房间同步",
+        onlineTitle: "在线对弈", onlineDesc: "随机黑白 • 无机器人",
+        botTitle: "人机对弈", botDesc: "可选黑白 • 负平不扣 OLL",
+        customTitle: "自定义与好友", customDesc: "自定时间 • 64格棋盘编辑",
+        profileTitle: "账号与资料", profileDesc: "玩家ID • 对局记录与成就",
+        rankingBtn: "排行榜", settingsBtn: "设置",
+        settingsModalTitle: "设置", langLabel: "语言 (11种语言)"
+      },
+      ru: {
+        devStatus: "v0.01 • Сборка Dev/Тест • Аккаунты и Комнаты",
+        onlineTitle: "Играть Онлайн", onlineDesc: "Случайный Цвет • Без Ботов",
+        botTitle: "Против Бота", botDesc: "Выбор Цвета • Без Потери OLL",
+        customTitle: "Свой Режим и Друг", customDesc: "Своё Время • Редактор Доски",
+        profileTitle: "Профиль и ID", profileDesc: "Аккаунт • История и Награды",
+        rankingBtn: "Рейтинг", settingsBtn: "Настройки",
+        settingsModalTitle: "Настройки", langLabel: "Язык (11 Языков)"
+      },
+      it: {
+        devStatus: "v0.01 • Build Dev/Test • Account e Stanze",
+        onlineTitle: "Gioca Online", onlineDesc: "Lato Casuale • Zero Bot",
+        botTitle: "Gioca vs Bot", botDesc: "Scegli Lato • Nessun Calo OLL",
+        customTitle: "Custom e Amico", customDesc: "Tempo Libero • Editor Scacchiera",
+        profileTitle: "Profilo e Account", profileDesc: "ID Giocatore • Storico e Premi",
+        rankingBtn: "Classifica", settingsBtn: "Impostazioni",
+        settingsModalTitle: "Impostazioni", langLabel: "Lingua (11 Lingue)"
+      },
+      ja: {
+        devStatus: "v0.01 • 開発テスト版 • アカウント＆ルーム同期",
+        onlineTitle: "オンライン対戦", onlineDesc: "白黒ランダム • ボットなし",
+        botTitle: "コンピュータ対戦", botDesc: "手番選択可 • 敗北時OLL減点なし",
+        customTitle: "カスタム＆フレンド", customDesc: "時間自由設定 • 64マス盤面編集",
+        profileTitle: "プロフィール・ID", profileDesc: "アカウント • 履歴とアワード",
+        rankingBtn: "ランキング", settingsBtn: "設定",
+        settingsModalTitle: "設定", langLabel: "言語 (11言語)"
+      },
+      de: {
+        devStatus: "v0.01 • Dev/Test-Build • Konten & Räume",
+        onlineTitle: "Online Spielen", onlineDesc: "Zufällige Seite • Keine Bots",
+        botTitle: "Gegen Bot", botDesc: "Seite Wählen • Kein OLL-Abzug",
+        customTitle: "Custom & Freund", customDesc: "Eigene Zeit • Brett-Editor",
+        profileTitle: "Profil & Konto", profileDesc: "Spieler-ID • Verlauf & Preise",
+        rankingBtn: "Rangliste", settingsBtn: "Einstellungen",
+        settingsModalTitle: "Einstellungen", langLabel: "Sprache (11 Sprachen)"
+      },
+      ko: {
+        devStatus: "v0.01 • 개발/테스트 버전 • 계정 및 방 동기화",
+        onlineTitle: "온라인 대전", onlineDesc: "흑백 랜덤 • 봇 없음",
+        botTitle: "컴퓨터 대전", botDesc: "진영 선택 • 패배 시 OLL 차감 없음",
+        customTitle: "커스텀 & 친구", customDesc: "시간 설정 • 64칸 보드 에디터",
+        profileTitle: "프로필 & 계정", profileDesc: "플레이어 ID • 기록 및 업적",
+        rankingBtn: "랭킹", settingsBtn: "설정",
+        settingsModalTitle: "설정", langLabel: "언어 (11개 언어)"
+      },
+      pt: {
+        devStatus: "v0.01 • Build Dev/Teste • Contas e Salas",
+        onlineTitle: "Jogar Online", onlineDesc: "Lado Aleatório • Sem Bots",
+        botTitle: "Jogar vs Bot", botDesc: "Escolha o Lado • Sem Perda de OLL",
+        customTitle: "Custom e Amigo", customDesc: "Tempo Livre • Editor de Tabuleiro",
+        profileTitle: "Perfil e Conta", profileDesc: "ID Jogador • Histórico e Prêmios",
+        rankingBtn: "Ranking", settingsBtn: "Configurações",
+        settingsModalTitle: "Configurações", langLabel: "Idioma (11 Idiomas)"
+      }
+    };
+
+    let currentLang = "th";
+
+    function renderLanguageButtons() {
+      const grid = document.getElementById("languageGrid");
+      if (!grid) return;
+      grid.innerHTML = LANGUAGES.map(l => {
+        const active = l.code === currentLang;
+        return `
+          <button type="button" onclick="setAppLanguage('${l.code}')" class="py-2 px-2 rounded-xl text-[11px] truncate flex items-center justify-center gap-1 border ${
+            active
+              ? "bg-[#81b64c] text-white border-[#93ca5b] font-black"
+              : "bg-[#181715] text-stone-300 border-[#383630] font-bold hover:bg-[#242320]"
+          }">
+            <span>${l.flag}</span>
+            <span class="truncate">${l.label}</span>
+          </button>
+        `;
+      }).join("");
+    }
+
+    function setAppLanguage(lang) {
+      currentLang = I18N[lang] ? lang : "th";
+      const t = I18N[currentLang];
+      document.getElementById("devBuildStatusText").textContent = t.devStatus;
+      document.getElementById("cardOnlineTitle").textContent = t.onlineTitle;
+      document.getElementById("cardOnlineDesc").textContent = t.onlineDesc;
+      document.getElementById("cardBotTitle").textContent = t.botTitle;
+      document.getElementById("cardBotDesc").textContent = t.botDesc;
+      document.getElementById("cardCustomTitle").textContent = t.customTitle;
+      document.getElementById("cardCustomDesc").textContent = t.customDesc;
+      document.getElementById("cardProfileTitle").textContent = t.profileTitle;
+      document.getElementById("cardProfileDesc").textContent = t.profileDesc;
+      document.getElementById("btnRankingText").textContent = t.rankingBtn;
+      document.getElementById("btnSettingsText").textContent = t.settingsBtn;
+      document.getElementById("settingsTitleLabel").textContent = t.settingsModalTitle;
+      document.getElementById("langSelectLabel").textContent = t.langLabel;
+      renderLanguageButtons();
+    }
+
+    // =========================================================================
+    // 2. 15-TIER OLL HIERARCHY (NO 'W' PREFIXES)
+    // =========================================================================
+    const OLL_TIERS = [
+      { min: 0,    max: 100,  name: "New To Chess",      badge: "NEW",     color: "bg-stone-600 text-white" },
+      { min: 101,  max: 400,  name: "Amateur",           badge: "AMR",     color: "bg-neutral-600 text-white" },
+      { min: 401,  max: 650,  name: "Beginner",          badge: "BEG",     color: "bg-zinc-600 text-white" },
+      { min: 651,  max: 900,  name: "Training",          badge: "TRN",     color: "bg-emerald-800 text-emerald-100" },
+      { min: 901,  max: 1200, name: "General",           badge: "GEN",     color: "bg-teal-700 text-white" },
+      { min: 1201, max: 1550, name: "Intermediate",      badge: "INT",     color: "bg-cyan-700 text-white" },
+      { min: 1551, max: 1850, name: "Experienced",       badge: "EXP",     color: "bg-blue-700 text-white" },
+      { min: 1851, max: 2100, name: "Pro Player",        badge: "PRO",     color: "bg-indigo-600 text-white" },
+      { min: 2101, max: 2250, name: "Master",            badge: "MST",     color: "bg-violet-600 text-white" },
+      { min: 2251, max: 2600, name: "CM / FM / IM",      badge: "IM",      color: "bg-red-600 text-white", note: "CM: เกมบุก | FM: เกมรับ | IM: ผสมผสานทั้ง 2 แบบ" },
+      { min: 2601, max: 2950, name: "GM",                badge: "GM",      color: "bg-amber-600 text-white" },
+      { min: 2951, max: 3200, name: "Queen / King",      badge: "KING",    color: "bg-orange-600 text-white" },
+      { min: 3201, max: 3375, name: "Emperor / Empress", badge: "EMPEROR", color: "bg-rose-600 text-white" },
+      { min: 3376, max: 3500, name: "Demon / God",       badge: "DEMON",   color: "bg-fuchsia-700 text-white" },
+      { min: 3501, max: 9999, name: "The Legendary",     badge: "LEGEND",  color: "bg-gradient-to-r from-amber-400 via-red-500 to-purple-600 text-white" }
+    ];
+
+    const BOT_ROSTER = [
+      { oll: 80,   name: "Pawn_Rookie",      avatar: "♟️" },
+      { oll: 320,  name: "Club_Novice",      avatar: "🌱" },
+      { oll: 540,  name: "Starter_Bot",      avatar: "🛡️" },
+      { oll: 780,  name: "Drill_Master",     avatar: "🎯" },
+      { oll: 1060, name: "Grid_Walker",      avatar: "⚔️" },
+      { oll: 1420, name: "Tactic_Hunter",    avatar: "🔥" },
+      { oll: 1720, name: "Sharp_Vanguard",   avatar: "🗡️" },
+      { oll: 1980, name: "Arena_Pro",        avatar: "👑" },
+      { oll: 2180, name: "Core_Master",      avatar: "🧠" },
+      { oll: 2390, name: "Viper_CM",         avatar: "🔥" },
+      { oll: 2520, name: "Aegis_FM",         avatar: "🛡️" },
+      { oll: 2580, name: "Hybrid_IM",        avatar: "⚡" },
+      { oll: 2790, name: "Grandmaster_V",    avatar: "♟️" },
+      { oll: 3090, name: "Sovereign_King",   avatar: "👑" },
+      { oll: 3310, name: "Overdrive_Emp",    avatar: "⚡" },
+      { oll: 3450, name: "Abyss_Demon",      avatar: "😈" },
+      { oll: 3580, name: "LEGEND_CORE",      avatar: "🌟" }
+    ];
+
+    function getTierByOll(oll) {
+      for (const t of OLL_TIERS) {
+        if (oll >= t.min && oll <= t.max) return t;
+      }
+      return OLL_TIERS[OLL_TIERS.length - 1];
+    }
+
+    // =========================================================================
+    // 3. SOUND EFFECTS (WEB AUDIO)
+    // =========================================================================
+    let soundEnabled = true;
+    let audioCtx = null;
+
+    function playMoveSound(type = "move") {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === "capture") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(95, now + 0.09);
+          gain.gain.setValueAtTime(0.22, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+          osc.start(now); osc.stop(now + 0.09);
+        } else if (type === "check") {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(520, now);
+          osc.frequency.exponentialRampToValueAtTime(680, now + 0.14);
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.start(now); osc.stop(now + 0.14);
+        } else {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(310, now);
+          osc.frequency.exponentialRampToValueAtTime(160, now + 0.055);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+          osc.start(now); osc.stop(now + 0.055);
+        }
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      document.getElementById("soundToggleBtn").textContent = soundEnabled ? "🔊" : "🔇";
+      const sb = document.getElementById("settingsSoundBtn");
+      if (sb) sb.textContent = soundEnabled ? "เปิดอยู่" : "ปิดเสียง";
+    }
+
+    // =========================================================================
+    // 4. PIECE ASSETS & MINIMAX EVALUATION
+    // =========================================================================
+    const PIECE_VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+
+    const PST = {
+      p: [
+        [0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,28,28,10,5,5],
+        [0,0,0,24,24,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]
+      ],
+      n: [
+        [-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],
+        [-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]
+      ],
+      b: [
+        [-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],
+        [-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]
+      ],
+      r: [
+        [0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],
+        [-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]
+      ],
+      q: [
+        [-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],
+        [0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],[-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]
+      ],
+      k: [
+        [-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],
+        [-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]
+      ]
+    };
+
+    const PIECE_SVG = {
+      wP: `<svg viewBox="0 0 45 45" class="chess-piece"><path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#fff" stroke="#18181b" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+      wR: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="#fff" stroke="#18181b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12 36v-4h21v4H12zM11 14V9h4v2h5V9h5v2h5V9h4v5" /><path d="M34 14l-3 3H14l-3-3" /><path d="M31 17v12.5H14V17" /><path d="M31 29.5l1.5 2.5h-20l1.5-2.5" /><path d="M11 14h23" fill="none" stroke-linejoin="miter"/></g></svg>`,
+      wN: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="none" stroke="#18181b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18" fill="#fff"/><path d="M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10" fill="#fff"/><circle cx="15" cy="15.5" r="1.2" fill="#18181b"/></g></svg>`,
+      wB: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="none" stroke="#18181b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g fill="#fff" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><circle cx="22.5" cy="8" r="2.5"/></g><path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke-linejoin="miter"/></g></svg>`,
+      wQ: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="#fff" stroke="#18181b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="2.2"/><circle cx="14" cy="9" r="2.2"/><circle cx="22.5" cy="8" r="2.2"/><circle cx="31" cy="9" r="2.2"/><circle cx="39" cy="12" r="2.2"/><path d="M9 26c8.5-1.5 21-1.5 27 0l2-12-7 11V11l-5.5 13.5-3-15-3 15-5.5-14V25L7 14l2 12z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt"/><path d="M11.5 30c3.5-1 18.5-1 22 0M12 33.5c6-1 15-1 21 0" fill="none"/></g></svg>`,
+      wK: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="none" stroke="#18181b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#fff" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-3.5-7.5-13-10.5-16-4-3 6 5 10 5 10V37z" fill="#fff"/><path d="M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0"/></g></svg>`,
+      bP: `<svg viewBox="0 0 45 45" class="chess-piece"><path d="M22.5 9c-2.21 0-4 1.79-4 4 0 .89.29 1.71.78 2.38C17.33 16.5 16 18.59 16 21c0 2.03.94 3.84 2.41 5.03-3 1.06-7.41 5.55-7.41 13.47h23c0-7.92-4.41-12.41-7.41-13.47 1.47-1.19 2.41-3 2.41-5.03 0-2.41-1.33-4.5-3.28-5.62.49-.67.78-1.49.78-2.38 0-2.21-1.79-4-4-4z" fill="#232220" stroke="#000" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+      bR: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="#232220" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39h27v-3H9v3zM12.5 32l1.5-2.5h17l1.5 2.5h-20zM12 36v-4h21v4H12z" stroke-linecap="butt"/><path d="M14 29.5v-13h17v13H14z" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M14 16.5L11 14h23l-3 2.5H14zM11 14V9h4v2h5V9h5v2h5V9h4v5H11z" stroke-linecap="butt"/><path d="M12 35.5h21M13 31.5h19M14 29.5h17M14 16.5h17M11 14h23" fill="none" stroke="#e5e5e5" stroke-width="1" stroke-linejoin="miter"/></g></svg>`,
+      bN: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M 22,10 C 32.5,11 38.5,18 38,39 L 15,39 C 15,30 25,32.5 23,18" fill="#232220"/><path d="M 24,18 C 24.38,20.91 18.45,25.37 16,27 C 13,29 13.18,31.34 11,31 C 9.958,30.06 12.41,27.96 11,28 C 10,28 11.19,29.23 10,30 C 9,30 5.997,31 6,26 C 6,24 12,14 12,14 C 12,14 13.89,12.1 14,10.5 C 13.27,9.506 13.5,8.5 13.5,7.5 C 14.5,6.5 16.5,10 16.5,10 L 18.5,10 C 18.5,10 19.28,8.008 21,7 C 22,7 22,10 22,10" fill="#232220"/><circle cx="15" cy="15.5" r="1.2" fill="#e5e5e5" stroke="none"/></g></svg>`,
+      bB: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g fill="#232220" stroke-linecap="butt"><path d="M9 36c3.39-.97 10.11.43 13.5-2 3.39 2.43 10.11 1.03 13.5 2 0 0 1.65.54 3 2-.68.97-1.65.99-3 .5-3.39-.97-10.11.46-13.5-1-3.39 1.46-10.11.03-13.5 1-1.354.49-2.323.47-3-.5 1.354-1.94 3-2 3-2z"/><path d="M15 32c2.5 2.5 12.5 2.5 15 0 .5-1.5 0-2 0-2 0-2.5-2.5-4-2.5-4 5.5-1.5 6-11.5-5-15.5-11 4-10.5 14-5 15.5 0 0-2.5 1.5-2.5 4 0 0-.5.5 0 2z"/><circle cx="22.5" cy="8" r="2.5"/></g><path d="M17.5 26h10M15 30h15m-7.5-14.5v5M20 18h5" stroke="#e5e5e5" stroke-width="1.3" stroke-linejoin="miter"/></g></svg>`,
+      bQ: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="#232220" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g stroke="none"><circle cx="6" cy="12" r="2.5"/><circle cx="14" cy="9" r="2.5"/><circle cx="22.5" cy="8" r="2.5"/><circle cx="31" cy="9" r="2.5"/><circle cx="39" cy="12" r="2.5"/></g><path d="M9 26c8.5-1.5 21-1.5 27 0l2.5-12.5L31 25l-.3-14.1-5.2 13.6-3-14.5-3 14.5-5.2-13.6L14 25 6.5 13.5 9 26z" stroke-linecap="butt"/><path d="M9 26c0 2 1.5 2 2.5 4 1 1.5 1 1 .5 3.5-1.5 1-1.5 2.5-1.5 2.5-1.5 1.5.5 2.5.5 2.5 6.5 1 16.5 1 23 0 0 0 1.5-1 0-2.5 0 0 .5-1.5-1-2.5-.5-2.5-.5-2 .5-3.5 1-2 2.5-2 2.5-4-8.5-1.5-18.5-1.5-27 0z" stroke-linecap="butt"/><path d="M11 38.5a35 35 1 0 0 23 0" fill="none" stroke-linecap="butt"/><path d="M11 29a35 35 1 0 1 23 0M12.5 31.5h20M11.5 34.5a35 35 1 0 0 22 0" fill="none" stroke="#e5e5e5" stroke-width="1.1"/></g></svg>`,
+      bK: `<svg viewBox="0 0 45 45" class="chess-piece"><g fill="none" stroke="#000" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22.5 11.63V6M20 8h5" stroke-linejoin="miter"/><path d="M22.5 25s4.5-7.5 3-10.5c0 0-1-2.5-3-2.5s-3 2.5-3 2.5c-1.5 3 3 10.5 3 10.5" fill="#232220" stroke-linecap="butt" stroke-linejoin="miter"/><path d="M11.5 37c5.5 3.5 15.5 3.5 21 0v-7s9-4.5 6-10.5c-4-6.5-13.5-3.5-16 4V27v-3.5c-3.5-7.5-13-10.5-16-4-3 6 5 10 5 10V37z" fill="#232220"/><path d="M11.5 30c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0m-21 3.5c5.5-3 15.5-3 21 0" stroke="#e5e5e5" stroke-width="1.1"/></g></svg>`
+    };
+
+    const AVATAR_CHOICES = ["⚡", "♟️", "👑", "🔥", "🛡️", "🧠", "😈", "🌟", "🐉", "🎯", "🐺", "💎"];
+
+    const AWARDS_CATALOG = [
+      { id: "first_match", icon: "♟️", title: "ลงสนามแรก", check: p => p.wins + p.losses + p.draws >= 1 },
+      { id: "first_win",   icon: "🏆", title: "ชัยชนะแรก", check: p => p.wins >= 1 },
+      { id: "oll_2500",    icon: "⚡", title: "แต้ม 2500+ OLL", check: p => p.peakOll >= 2500 },
+      { id: "oll_3000",    icon: "👑", title: "3000+ OLL", check: p => p.peakOll >= 3000 }
+    ];
+
+    // =========================================================================
+    // 5. ACCOUNT & PLAYER ID SYSTEM (CHT-XXXX)
+    // =========================================================================
+    const ACCOUNTS_KEY = "CHOT_V001_ACCOUNTS";
+    const ACTIVE_ID_KEY = "CHOT_V001_ACTIVE_ID";
+
+    function generatePlayerId(existingIds = []) {
+      let id = "";
+      do {
+        const num = Math.floor(1000 + Math.random() * 9000);
+        id = `CHT-${num}`;
+      } while (existingIds.includes(id));
+      return id;
+    }
+
+    function createAccountRecord(username, oll = 2420, tagline = "บัญชีผู้เล่น v0.01 • ข้อมูลแยกตามไอดีในเครื่อง", avatar = "⚡", id = null) {
+      return {
+        id: id || generatePlayerId(accountsState.accounts.map(a => a.id)),
+        username: username || "Zero",
+        tagline,
+        avatar,
+        oll: Math.max(0, Math.min(4000, Number(oll) || 1200)),
+        peakOll: Math.max(0, Math.min(4000, Number(oll) || 1200)),
+        streakDays: 1,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        history: []
+      };
+    }
+
+    function loadAccountsStore() {
+      try {
+        const raw = localStorage.getItem(ACCOUNTS_KEY);
+        const activeId = localStorage.getItem(ACTIVE_ID_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const current = parsed.find(a => a.id === activeId) || parsed[0];
+            return { accounts: parsed, activeId: current.id };
+          }
+        }
+      } catch (e) {}
+
+      const firstAcc = createAccountRecord("Zero", 2420, "บัญชีผู้เล่น v0.01 • ข้อมูลแยกตามไอดีในเครื่อง", "⚡", "CHT-1001");
+      return { accounts: [firstAcc], activeId: firstAcc.id };
+    }
+
+    let accountsState = loadAccountsStore();
+    let profile = accountsState.accounts.find(a => a.id === accountsState.activeId) || accountsState.accounts[0];
+
+    function saveAccountsStore() {
+      const idx = accountsState.accounts.findIndex(a => a.id === profile.id);
+      if (idx >= 0) accountsState.accounts[idx] = profile;
+      else accountsState.accounts.push(profile);
+      accountsState.activeId = profile.id;
+      try {
+        localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accountsState.accounts));
+        localStorage.setItem(ACTIVE_ID_KEY, accountsState.activeId);
+      } catch (e) {}
+    }
+
+    function switchActiveAccount(accountId) {
+      const found = accountsState.accounts.find(a => a.id === accountId);
+      if (!found) return;
+      profile = found;
+      saveAccountsStore();
+      syncHeaderUser();
+      renderProfileView();
+      renderRankingView();
+    }
+
+    function openCreateAccountModal() {
+      document.getElementById("newAccountNameInput").value = "";
+      document.getElementById("newAccountOllInput").value = "1200";
+      document.getElementById("createAccountErr").classList.add("hidden");
+      openModal("createAccountModal");
+    }
+
+    function createNewAccount() {
+      const nameInput = document.getElementById("newAccountNameInput").value.trim();
+      const ollInput = parseInt(document.getElementById("newAccountOllInput").value, 10);
+      const errEl = document.getElementById("createAccountErr");
+
+      if (!nameInput) {
+        errEl.textContent = "กรุณากรอกชื่อผู้เล่นก่อนสร้างบัญชี";
+        errEl.classList.remove("hidden");
+        return;
+      }
+
+      const freshAcc = createAccountRecord(
+        nameInput,
+        Number.isNaN(ollInput) ? 1200 : ollInput,
+        "บัญชีผู้เล่น v0.01 • สร้างใหม่ในเครื่อง",
+        AVATAR_CHOICES[accountsState.accounts.length % AVATAR_CHOICES.length]
+      );
+      accountsState.accounts.push(freshAcc);
+      profile = freshAcc;
+      saveAccountsStore();
+
+      closeModal("createAccountModal");
+      syncHeaderUser();
+      renderProfileView();
+      renderRankingView();
+    }
+
+    // =========================================================================
+    // 6. REAL ROOM SYNC (BROADCASTCHANNEL + ROOM REGISTRY, ZERO BOTS IN ONLINE)
+    // =========================================================================
+    const ONLINE_ROOMS_KEY = "CHOT_V001_ONLINE_ROOMS";
+    let roomChannel = null;
+    let activeRoomCode = null;
+    let clientInstanceId = "CL-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+
+    function getRoomsRegistry() {
+      try {
+        const raw = localStorage.getItem(ONLINE_ROOMS_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveRoomsRegistry(reg) {
+      try { localStorage.setItem(ONLINE_ROOMS_KEY, JSON.stringify(reg)); } catch (e) {}
+    }
+
+    function initRoomBroadcastChannel() {
+      if (typeof BroadcastChannel === "undefined") return;
+      if (roomChannel) roomChannel.close();
+      roomChannel = new BroadcastChannel("CHOT_V001_ROOM_CHANNEL");
+      roomChannel.onmessage = (ev) => {
+        const msg = ev.data;
+        if (!msg || msg.sender === clientInstanceId) return;
+        if (!activeRoomCode || msg.roomCode !== activeRoomCode) return;
+
+        if (msg.type === "move" && msg.move) {
+          applyRemoteRoomMove(msg.move, msg.whiteTime, msg.blackTime);
+        } else if (msg.type === "player_joined" && currentSession) {
+          currentSession.opponent.name = msg.playerName || "Remote_Player";
+          currentSession.opponent.oll = msg.playerOll || profile.oll;
+          document.getElementById("topNameText").textContent = currentSession.opponent.name;
+          document.getElementById("topOllText").textContent = `(${currentSession.opponent.oll} OLL)`;
+          document.getElementById("arenaModeDesc").textContent = `เชื่อมต่อผู้เล่นจริงในห้อง ${activeRoomCode}`;
+        }
+      };
+    }
+
+    function startOnlineRoom(label, baseSec, incSec) {
+      closeModal("onlineTimeModal");
+      const roomCode = "ROOM-" + Math.floor(1000 + Math.random() * 9000);
+      const hostColor = Math.random() < 0.5 ? "w" : "b";
+
+      const reg = getRoomsRegistry();
+      reg[roomCode] = {
+        code: roomCode,
+        timeLabel: label.toUpperCase(),
+        baseSec,
+        incSec,
+        hostColor,
+        guestColor: hostColor === "w" ? "b" : "w",
+        hostName: profile.username,
+        hostId: profile.id,
+        hostOll: profile.oll,
+        createdAt: Date.now()
+      };
+      saveRoomsRegistry(reg);
+      activeRoomCode = roomCode;
+
+      setupArenaSession({
+        mode: "online_room",
+        roomCode,
+        playerColor: hostColor,
+        rated: false,
+        fen: null,
+        timeLabel: label.toUpperCase(),
+        baseSec,
+        incSec,
+        opponent: {
+          name: `Waiting (${roomCode})`,
+          oll: profile.oll,
+          avatar: "🌐",
+          badge: "ROOM",
+          sub: `รหัสห้อง: ${roomCode} • รอผู้เล่นฝั่งตรงข้าม • ไม่มีบอท`
+        }
+      });
+
+      if (roomChannel) {
+        roomChannel.postMessage({
+          type: "room_created",
+          sender: clientInstanceId,
+          roomCode
+        });
+      }
+    }
+
+    function joinRoomByCode() {
+      const inputEl = document.getElementById("joinRoomCodeInput");
+      const errEl = document.getElementById("joinRoomErrMsg");
+      const code = (inputEl.value || "").trim().toUpperCase();
+      const reg = getRoomsRegistry();
+      const room = reg[code];
+
+      if (!room) {
+        errEl.textContent = "ไม่พบรหัสห้องนี้ในเครื่อง/เบราว์เซอร์ กรุณาสร้างห้องหรือตรวจสอบรหัสอีกครั้ง";
+        errEl.classList.remove("hidden");
+        return;
+      }
+
+      errEl.classList.add("hidden");
+      closeModal("onlineTimeModal");
+      activeRoomCode = room.code;
+
+      const tier = getTierByOll(room.hostOll);
+      setupArenaSession({
+        mode: "online_room",
+        roomCode: room.code,
+        playerColor: room.guestColor,
+        rated: false,
+        fen: null,
+        timeLabel: room.timeLabel,
+        baseSec: room.baseSec,
+        incSec: room.incSec,
+        opponent: {
+          name: room.hostName || "Host_Player",
+          oll: room.hostOll || profile.oll,
+          avatar: "👤",
+          badge: tier.badge,
+          sub: `ห้อง ${room.code} • ผู้เล่นจริง • ไม่มีบอท`
+        }
+      });
+
+      if (roomChannel) {
+        roomChannel.postMessage({
+          type: "player_joined",
+          sender: clientInstanceId,
+          roomCode: room.code,
+          playerName: profile.username,
+          playerOll: profile.oll
+        });
+      }
+    }
+
+    function applyRemoteRoomMove(moveObj, wTime, bTime) {
+      const result = chess.move(moveObj);
+      if (!result) return;
+      if (!matchStarted) startMatchClock();
+      if (typeof wTime === "number" && !unlimitedClock) whiteTimeSec = wTime;
+      if (typeof bTime === "number" && !unlimitedClock) blackTimeSec = bTime;
+
+      if (chess.in_check()) playMoveSound("check");
+      else if (result.captured) playMoveSound("capture");
+      else playMoveSound("move");
+
+      lastMoveInfo = { from: result.from, to: result.to };
+      selectedSq = null;
+      legalMoves = [];
+      renderBoard();
+      refreshClocksUI();
+
+      if (chess.game_over()) concludeMatch();
+    }
+
+    // =========================================================================
+    // 7. CUSTOM BOARD EDITOR & FRIEND PLAY
+    // =========================================================================
+    let editorGrid = {};
+    let selectedPalettePiece = "wQ";
+    let customOppMode = "friend";
+    let customFirstTurn = "w";
+
+    function initCustomEditor() {
+      const wPieces = ["wK", "wQ", "wR", "wB", "wN", "wP"];
+      const bPieces = ["bK", "bQ", "bR", "bB", "bN", "bP", "ERASE"];
+
+      document.getElementById("editorPaletteWhite").innerHTML = wPieces.map(code => `
+        <button type="button" onclick="pickEditorPiece('${code}')" data-pcode="${code}" class="ed-pal-btn flex-1 h-9 rounded-lg bg-[#242320] border border-[#3a3833] flex items-center justify-center p-1">
+          ${PIECE_SVG[code]}
+        </button>
+      `).join("");
+
+      document.getElementById("editorPaletteBlack").innerHTML = bPieces.map(code => `
+        <button type="button" onclick="pickEditorPiece('${code}')" data-pcode="${code}" class="ed-pal-btn flex-1 h-9 rounded-lg bg-[#242320] border border-[#3a3833] flex items-center justify-center p-1 text-xs font-black text-red-400">
+          ${code === "ERASE" ? "ลบ" : PIECE_SVG[code]}
+        </button>
+      `).join("");
+
+      document.getElementById("customRoomCodeInput").value = "FRD-" + Math.floor(1000 + Math.random() * 9000);
+      editorPreset("standard");
+      pickEditorPiece("wQ");
+    }
+
+    function pickEditorPiece(code) {
+      selectedPalettePiece = code;
+      document.querySelectorAll(".ed-pal-btn").forEach(btn => {
+        const active = btn.dataset.pcode === code;
+        btn.className = `ed-pal-btn flex-1 h-9 rounded-lg flex items-center justify-center p-1 text-xs font-black text-red-400 border ${active ? "bg-[#81b64c]/30 border-[#81b64c]" : "bg-[#242320] border-[#3a3833]"}`;
+      });
+    }
+
+    function editorPreset(type) {
+      const temp = new Chess();
+      if (type === "kingsOnly") {
+        temp.clear();
+        temp.put({ type: "k", color: "w" }, "e1");
+        temp.put({ type: "k", color: "b" }, "e8");
+      } else if (type === "queenOdds") {
+        temp.remove("d1");
+      } else if (type === "rookOdds") {
+        temp.remove("a1");
+      } else if (type === "endgame") {
+        temp.clear();
+        temp.put({ type: "k", color: "w" }, "g1");
+        temp.put({ type: "r", color: "w" }, "d1");
+        temp.put({ type: "p", color: "w" }, "f2");
+        temp.put({ type: "p", color: "w" }, "g2");
+        temp.put({ type: "p", color: "w" }, "h2");
+        temp.put({ type: "k", color: "b" }, "g8");
+        temp.put({ type: "r", color: "b" }, "e8");
+        temp.put({ type: "p", color: "b" }, "f7");
+        temp.put({ type: "p", color: "b" }, "g7");
+      }
+
+      editorGrid = {};
+      const files = ["a","b","c","d","e","f","g","h"];
+      const ranks = ["8","7","6","5","4","3","2","1"];
+      ranks.forEach(r => {
+        files.forEach(f => {
+          const sq = f + r;
+          const p = temp.get(sq);
+          if (p) editorGrid[sq] = p.color + p.type.toUpperCase();
+        });
+      });
+      renderCustomEditorBoard();
+    }
+
+    function renderCustomEditorBoard() {
+      const boardEl = document.getElementById("customEditorBoard");
+      boardEl.innerHTML = "";
+      const files = ["a","b","c","d","e","f","g","h"];
+      const ranks = ["8","7","6","5","4","3","2","1"];
+
+      ranks.forEach((r, rIdx) => {
+        files.forEach((f, fIdx) => {
+          const sq = f + r;
+          const isLight = (rIdx + fIdx) % 2 === 0;
+          const cell = document.createElement("div");
+          cell.className = `relative flex items-center justify-center cursor-pointer ${isLight ? "sq-light" : "sq-dark"}`;
+          const code = editorGrid[sq];
+          if (code && PIECE_SVG[code]) cell.innerHTML = PIECE_SVG[code];
+
+          cell.onclick = () => {
+            if (selectedPalettePiece === "ERASE") {
+              delete editorGrid[sq];
+            } else {
+              if (selectedPalettePiece === "wK") {
+                Object.keys(editorGrid).forEach(k => { if (editorGrid[k] === "wK") delete editorGrid[k]; });
+              }
+              if (selectedPalettePiece === "bK") {
+                Object.keys(editorGrid).forEach(k => { if (editorGrid[k] === "bK") delete editorGrid[k]; });
+              }
+              editorGrid[sq] = selectedPalettePiece;
+            }
+            renderCustomEditorBoard();
+          };
+          boardEl.appendChild(cell);
+        });
+      });
+    }
+
+    function setCustomOpponentMode(mode) {
+      customOppMode = mode;
+      const fBtn = document.getElementById("customOppFriendBtn");
+      const bBtn = document.getElementById("customOppBotBtn");
+      const fPanel = document.getElementById("customFriendPanel");
+      const bPanel = document.getElementById("customBotPanel");
+
+      if (mode === "friend") {
+        fBtn.className = "p-3 rounded-xl border border-[#81b64c] bg-[#81b64c]/20 text-left";
+        bBtn.className = "p-3 rounded-xl border border-[#3a3833] bg-[#181715] text-left";
+        fPanel.classList.remove("hidden");
+        bPanel.classList.add("hidden");
+      } else {
+        bBtn.className = "p-3 rounded-xl border border-[#81b64c] bg-[#81b64c]/20 text-left";
+        fBtn.className = "p-3 rounded-xl border border-[#3a3833] bg-[#181715] text-left";
+        bPanel.classList.remove("hidden");
+        fPanel.classList.add("hidden");
+      }
+    }
+
+    function toggleUnlimitedTime() {
+      const unlim = document.getElementById("customUnlimitedTime").checked;
+      document.getElementById("customTimeSliders").style.opacity = unlim ? "0.4" : "1";
+      document.getElementById("customTimeSliders").style.pointerEvents = unlim ? "none" : "auto";
+    }
+
+    function updateCustomTimeLabels() {
+      const m = document.getElementById("customMinRange").value;
+      const inc = document.getElementById("customIncRange").value;
+      document.getElementById("customMinVal").textContent = `${m} นาที`;
+      document.getElementById("customIncVal").textContent = `+${inc} วินาที`;
+    }
+
+    function setCustomFirstTurn(turn) {
+      customFirstTurn = turn;
+      document.getElementById("turnWhiteBtn").className = turn === "w"
+        ? "py-2 rounded-xl bg-white text-black font-black"
+        : "py-2 rounded-xl bg-[#181715] text-stone-300 border border-[#383630] font-bold";
+      document.getElementById("turnBlackBtn").className = turn === "b"
+        ? "py-2 rounded-xl bg-stone-900 text-white border border-amber-400 font-black"
+        : "py-2 rounded-xl bg-[#181715] text-stone-300 border border-[#383630] font-bold";
+    }
+
+    function copyTextWithFeedback(inputId, toastId) {
+      const code = document.getElementById(inputId).value;
+      const ta = document.createElement("textarea");
+      ta.value = code;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      const toast = document.getElementById(toastId);
+      toast.classList.remove("hidden");
+      setTimeout(() => toast.classList.add("hidden"), 2000);
+    }
+
+    function buildFenFromEditor() {
+      const files = ["a","b","c","d","e","f","g","h"];
+      const ranks = ["8","7","6","5","4","3","2","1"];
+      let hasWK = false, hasBK = false;
+
+      const rows = ranks.map(r => {
+        let empty = 0, line = "";
+        files.forEach(f => {
+          const code = editorGrid[f + r];
+          if (!code) {
+            empty++;
+          } else {
+            if (empty > 0) { line += empty; empty = 0; }
+            if (code === "wK") hasWK = true;
+            if (code === "bK") hasBK = true;
+            const ch = code[1];
+            line += code[0] === "w" ? ch.toUpperCase() : ch.toLowerCase();
+          }
+        });
+        if (empty > 0) line += empty;
+        return line;
+      });
+      if (!hasWK || !hasBK) return null;
+      return `${rows.join("/")} ${customFirstTurn} - - 0 1`;
+    }
+
+    function launchCustomMatch() {
+      const errEl = document.getElementById("customValidationMsg");
+      const fen = buildFenFromEditor();
+      if (!fen || !(new Chess().load(fen))) {
+        errEl.textContent = "ตำแหน่งหมากไม่ถูกต้อง (ต้องมีคิงขาวและคิงดำอย่างละ 1 ตัว และไม่รุกค้างฝ่ายรอเดิน)";
+        errEl.classList.remove("hidden");
+        return;
+      }
+      errEl.classList.add("hidden");
+
+      const unlimited = document.getElementById("customUnlimitedTime").checked;
+      const mins = parseInt(document.getElementById("customMinRange").value, 10);
+      const inc = parseInt(document.getElementById("customIncRange").value, 10);
+
+      if (customOppMode === "friend") {
+        const friendName = document.getElementById("customFriendNameInput").value.trim() || "Friend_Player";
+        setupArenaSession({
+          mode: "custom_friend",
+          playerColor: "w",
+          rated: false,
+          fen,
+          timeLabel: unlimited ? "CUSTOM ∞" : `CUSTOM ${mins}+${inc}`,
+          baseSec: unlimited ? null : mins * 60,
+          incSec: unlimited ? 0 : inc,
+          opponent: { name: friendName, oll: profile.oll, avatar: "👥", badge: "FRIEND", sub: "เล่นกับเพื่อน (สลับฝั่ง)" }
+        });
+      } else {
+        const botIdx = parseInt(document.getElementById("customBotSelect").value, 10);
+        const bot = BOT_ROSTER[botIdx] || BOT_ROSTER[14];
+        const tier = getTierByOll(bot.oll);
+        setupArenaSession({
+          mode: "bot",
+          playerColor: "w",
+          rated: false,
+          fen,
+          timeLabel: unlimited ? "CUSTOM ∞" : `CUSTOM ${mins}+${inc}`,
+          baseSec: unlimited ? null : mins * 60,
+          incSec: unlimited ? 0 : inc,
+          opponent: { name: bot.name, oll: bot.oll, avatar: bot.avatar, badge: tier.badge, sub: `${tier.min}–${tier.max > 9000 ? "∞" : tier.max} • ${tier.name}` }
+        });
+      }
+    }
+
+    // =========================================================================
+    // 8. BOT SETUP & SIDE SELECTION (WHITE / BLACK / RANDOM, NO OLL LOSS)
+    // =========================================================================
+    let botSidePref = "w";
+
+    function setBotSidePref(pref) {
+      botSidePref = pref;
+      const styles = {
+        w: "py-2.5 rounded-xl bg-white text-black font-black",
+        b: "py-2.5 rounded-xl bg-stone-900 text-white border border-amber-400 font-black",
+        random: "py-2.5 rounded-xl bg-[#81b64c] text-white font-black"
+      };
+      const idle = "py-2.5 rounded-xl bg-[#181715] text-stone-300 border border-[#383630] font-bold";
+      document.getElementById("sideBtnWhite").className = pref === "w" ? styles.w : idle;
+      document.getElementById("sideBtnBlack").className = pref === "b" ? styles.b : idle;
+      document.getElementById("sideBtnRandom").className = pref === "random" ? styles.random : idle;
+    }
+
+    function openOnlineTimeModal() {
+      document.getElementById("joinRoomErrMsg").classList.add("hidden");
+      openModal("onlineTimeModal");
+    }
+
+    function openBotSetupModal() {
+      openModal("botSetupModal");
+    }
+
+    function launchBotMatchFromModal() {
+      const botIdx = parseInt(document.getElementById("botModalSelect").value, 10);
+      const [label, secStr, incStr] = document.getElementById("botTimeSelect").value.split("|");
+      const bot = BOT_ROSTER[botIdx] || BOT_ROSTER[14];
+      const tier = getTierByOll(bot.oll);
+      const chosenSide = botSidePref === "random" ? (Math.random() < 0.5 ? "w" : "b") : botSidePref;
+
+      closeModal("botSetupModal");
+      setupArenaSession({
+        mode: "bot",
+        playerColor: chosenSide,
+        rated: true,
+        fen: null,
+        timeLabel: label.toUpperCase(),
+        baseSec: parseInt(secStr, 10),
+        incSec: parseInt(incStr, 10),
+        opponent: {
+          name: bot.name,
+          oll: bot.oll,
+          avatar: bot.avatar,
+          badge: tier.badge,
+          sub: `${tier.min}–${tier.max > 9000 ? "∞" : tier.max} • ${tier.name}`
+        }
+      });
+    }
+
+    // =========================================================================
+    // 9. ARENA & PERFORMANCE.NOW() DELTA-TIME CLOCK ENGINE
+    // =========================================================================
+    const chess = new Chess();
+    let currentSession = null;
+    let selectedSq = null;
+    let legalMoves = [];
+    let lastMoveInfo = null;
+    let pendingPromo = null;
+    let boardFlipped = false;
+    let boardTheme = "classic";
+
+    let whiteTimeSec = 180;
+    let blackTimeSec = 180;
+    let unlimitedClock = false;
+    let clockInterval = null;
+    let lastTickPerf = 0;
+    let matchStarted = false;
+    let aiThinking = false;
+    let aiTimeoutId = null;
+
+    let aggPercent = 50;
+    let defPercent = 50;
+
+    function getAiColor() {
+      if (!currentSession || currentSession.mode !== "bot") return null;
+      return currentSession.playerColor === "w" ? "b" : "w";
+    }
+
+    function setupArenaSession(cfg) {
+      currentSession = cfg;
+      stopMatchClock();
+      if (aiTimeoutId) clearTimeout(aiTimeoutId);
+      aiThinking = false;
+      matchStarted = false;
+      selectedSq = null;
+      legalMoves = [];
+      lastMoveInfo = null;
+      pendingPromo = null;
+      boardFlipped = cfg.playerColor === "b";
+
+      if (cfg.fen) chess.load(cfg.fen);
+      else chess.reset();
+
+      unlimitedClock = cfg.baseSec === null;
+      whiteTimeSec = unlimitedClock ? 0 : cfg.baseSec;
+      blackTimeSec = unlimitedClock ? 0 : cfg.baseSec;
+
+      aggPercent = 50;
+      defPercent = 50;
+      updateStyleBars();
+
+      const pTier = getTierByOll(profile.oll);
+      const sideText = cfg.playerColor === "w" ? "⬜ ขาว" : "⬛ ดำ";
+      document.getElementById("botSideAvatarBox").textContent = profile.avatar;
+      document.getElementById("botSideNameText").textContent = `${profile.username} (${profile.id})`;
+      document.getElementById("botSideOllText").textContent = `(${profile.oll} OLL)`;
+      document.getElementById("botSideTitleBadge").textContent = getPlayerStyleBadge().code;
+      document.getElementById("botSideSubText").textContent = `${sideText} • ${pTier.name}`;
+
+      document.getElementById("topAvatarBox").textContent = cfg.opponent.avatar;
+      document.getElementById("topNameText").textContent = cfg.opponent.name;
+      document.getElementById("topOllText").textContent = cfg.mode === "custom_friend" ? "(เพื่อน)" : `(${cfg.opponent.oll} OLL)`;
+      document.getElementById("topTitleBadge").textContent = cfg.opponent.badge;
+      document.getElementById("topSubText").textContent = cfg.opponent.sub;
+
+      const roomBadge = document.getElementById("arenaRoomCodeBadge");
+      if (cfg.roomCode) {
+        roomBadge.textContent = cfg.roomCode;
+        roomBadge.classList.remove("hidden");
+      } else {
+        roomBadge.classList.add("hidden");
+      }
+
+      document.getElementById("arenaModeBadge").textContent = cfg.timeLabel;
+      document.getElementById("arenaStatusBadge").textContent = "พร้อมเดิน";
+      document.getElementById("arenaStatusBadge").className = "px-2 py-0.5 rounded bg-[#81b64c]/20 text-[#81b64c] text-[11px] font-bold";
+      document.getElementById("arenaModeDesc").textContent = cfg.mode === "bot"
+        ? `บอท • คุณเล่น ${sideText} • แพ้ไม่หัก OLL`
+        : cfg.mode === "online_room"
+        ? `ห้อง ${cfg.roomCode} • คุณได้ ${sideText} • ไม่มีบอท`
+        : "โหมด Custom / เพื่อน";
+
+      refreshClocksUI();
+      navigateTo("arena");
+
+      if (getAiColor() && chess.turn() === getAiColor()) {
+        startMatchClock();
+        scheduleBotMove();
+      }
+    }
+
+    function restartCurrentArena() {
+      if (currentSession) setupArenaSession(currentSession);
+    }
+
+    function startMatchClock() {
+      if (matchStarted) return;
+      matchStarted = true;
+      document.getElementById("arenaStatusBadge").textContent = "กำลังแข่ง";
+      document.getElementById("arenaStatusBadge").className = "px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[11px] font-bold";
+
+      if (unlimitedClock) return;
+      lastTickPerf = performance.now();
+      if (clockInterval) clearInterval(clockInterval);
+
+      clockInterval = setInterval(() => {
+        if (!matchStarted || chess.game_over()) {
+          stopMatchClock();
+          return;
+        }
+        const now = performance.now();
+        const elapsed = (now - lastTickPerf) / 1000;
+        lastTickPerf = now;
+
+        if (chess.turn() === "w") {
+          whiteTimeSec = Math.max(0, whiteTimeSec - elapsed);
+          if (whiteTimeSec <= 0) { concludeMatch("timeout_w"); return; }
+        } else {
+          blackTimeSec = Math.max(0, blackTimeSec - elapsed);
+          if (blackTimeSec <= 0) { concludeMatch("timeout_b"); return; }
+        }
+        refreshClocksUI();
+      }, 50);
+    }
+
+    function stopMatchClock() {
+      matchStarted = false;
+      if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+    }
+
+    function formatTimeDisplay(sec) {
+      if (unlimitedClock) return "∞";
+      const s = Math.max(0, sec);
+      const mins = Math.floor(s / 60);
+      const secs = Math.floor(s % 60);
+      const tenths = Math.floor((s * 10) % 10);
+      return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}.${tenths}`;
+    }
+
+    function refreshClocksUI() {
+      const wBox = document.getElementById("botSideClockBox");
+      const bBox = document.getElementById("topClockBox");
+      wBox.textContent = formatTimeDisplay(whiteTimeSec);
+      bBox.textContent = formatTimeDisplay(blackTimeSec);
+
+      const wTurn = chess.turn() === "w";
+      wBox.className = `clock-box ${wTurn ? "clock-active" : "clock-idle"} ${!unlimitedClock && whiteTimeSec > 0 && whiteTimeSec <= 10 ? "clock-low" : ""}`;
+      bBox.className = `clock-box ${!wTurn ? "clock-active" : "clock-idle"} ${!unlimitedClock && blackTimeSec > 0 && blackTimeSec <= 10 ? "clock-low" : ""}`;
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById("chessboard");
+      boardEl.innerHTML = "";
+      boardEl.className = `w-full h-full grid grid-cols-8 grid-rows-8 rounded-lg overflow-hidden board-${boardTheme}`;
+
+      const files = ["a","b","c","d","e","f","g","h"];
+      const ranks = ["8","7","6","5","4","3","2","1"];
+      const dispRanks = boardFlipped ? [...ranks].reverse() : ranks;
+      const dispFiles = boardFlipped ? [...files].reverse() : files;
+
+      let checkSq = null;
+      if (chess.in_check()) {
+        const turnColor = chess.turn();
+        const grid = chess.board();
+        for (let r = 0; r < 8; r++) {
+          for (let c = 0; c < 8; c++) {
+            const p = grid[r][c];
+            if (p && p.type === "k" && p.color === turnColor) checkSq = files[c] + ranks[r];
+          }
+        }
+      }
+
+      dispRanks.forEach((rank, rIdx) => {
+        dispFiles.forEach((file, fIdx) => {
+          const sq = file + rank;
+          const isLight = (files.indexOf(file) + ranks.indexOf(rank)) % 2 === 0;
+          const cell = document.createElement("div");
+          cell.className = `relative flex items-center justify-center ${isLight ? "sq-light" : "sq-dark"}`;
+
+          if (selectedSq === sq) cell.classList.add("sq-selected");
+          if (lastMoveInfo && (lastMoveInfo.from === sq || lastMoveInfo.to === sq)) cell.classList.add("sq-last-move");
+          if (checkSq === sq) cell.classList.add("sq-check");
+
+          if (fIdx === 0) {
+            const rl = document.createElement("span");
+            rl.className = "absolute top-0.5 left-1 text-[10px] font-extrabold pointer-events-none opacity-80";
+            rl.textContent = rank;
+            cell.appendChild(rl);
+          }
+          if (rIdx === 7) {
+            const fl = document.createElement("span");
+            fl.className = "absolute bottom-0.5 right-1 text-[10px] font-extrabold pointer-events-none opacity-80";
+            fl.textContent = file;
+            cell.appendChild(fl);
+          }
+
+          const piece = chess.get(sq);
+          if (piece) {
+            const wrap = document.createElement("div");
+            wrap.className = "w-full h-full flex items-center justify-center z-10";
+            wrap.innerHTML = PIECE_SVG[piece.color + piece.type.toUpperCase()];
+            cell.appendChild(wrap);
+          }
+
+          const legalTarget = legalMoves.find(m => m.to === sq);
+          if (legalTarget) {
+            const hint = document.createElement("div");
+            hint.className = `absolute z-20 ${piece ? "hint-capture" : "hint-dot"}`;
+            cell.appendChild(hint);
+          }
+
+          cell.addEventListener("click", () => handleSquareClick(sq));
+          boardEl.appendChild(cell);
+        });
+      });
+
+      renderMoveLog();
+      renderCapturedPieces();
+    }
+
+    function handleSquareClick(sq) {
+      if (chess.game_over() || aiThinking) return;
+      const aiColor = getAiColor();
+      if (aiColor && chess.turn() === aiColor) return;
+      if (currentSession && currentSession.mode === "online_room" && chess.turn() !== currentSession.playerColor) return;
+
+      const targetMove = legalMoves.find(m => m.to === sq);
+      if (targetMove) {
+        if (targetMove.flags.includes("p")) {
+          openPromotionModal(targetMove.from, targetMove.to, chess.turn());
+          return;
+        }
+        commitMove({ from: targetMove.from, to: targetMove.to });
+        return;
+      }
+
+      const piece = chess.get(sq);
+      if (piece && piece.color === chess.turn()) {
+        selectedSq = sq;
+        legalMoves = chess.moves({ square: sq, verbose: true });
+      } else {
+        selectedSq = null;
+        legalMoves = [];
+      }
+      renderBoard();
+    }
+
+    function openPromotionModal(from, to, color) {
+      pendingPromo = { from, to };
+      const overlay = document.getElementById("promotionOverlay");
+      const box = document.getElementById("promotionChoices");
+      box.innerHTML = "";
+      ["q", "r", "b", "n"].forEach(t => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "w-14 h-14 rounded-xl bg-[#34322d] hover:bg-[#81b64c] flex items-center justify-center p-1 transition";
+        btn.innerHTML = PIECE_SVG[color + t.toUpperCase()];
+        btn.onclick = () => {
+          overlay.classList.add("hidden");
+          commitMove({ from: pendingPromo.from, to: pendingPromo.to, promotion: t });
+          pendingPromo = null;
+        };
+        box.appendChild(btn);
+      });
+      overlay.classList.remove("hidden");
+    }
+
+    function commitMove(moveObj) {
+      const result = chess.move(moveObj);
+      if (!result) return;
+
+      if (!matchStarted) startMatchClock();
+
+      if (!unlimitedClock && currentSession && currentSession.incSec > 0) {
+        if (result.color === "w") whiteTimeSec += currentSession.incSec;
+        else blackTimeSec += currentSession.incSec;
+      }
+
+      if (chess.in_check()) playMoveSound("check");
+      else if (result.captured) playMoveSound("capture");
+      else playMoveSound("move");
+
+      lastMoveInfo = { from: result.from, to: result.to };
+      selectedSq = null;
+      legalMoves = [];
+
+      if (currentSession && result.color === currentSession.playerColor) {
+        analyzeMoveStyle(result);
+      }
+
+      if (currentSession && currentSession.mode === "online_room" && result.color === currentSession.playerColor && roomChannel) {
+        roomChannel.postMessage({
+          type: "move",
+          sender: clientInstanceId,
+          roomCode: currentSession.roomCode,
+          move: { from: result.from, to: result.to, promotion: result.promotion },
+          whiteTime: whiteTimeSec,
+          blackTime: blackTimeSec
+        });
+      }
+
+      renderBoard();
+      refreshClocksUI();
+
+      if (chess.game_over()) {
+        concludeMatch();
+        return;
+      }
+
+      if (currentSession && currentSession.mode === "custom_friend") {
+        boardFlipped = chess.turn() === "b";
+        renderBoard();
+        return;
+      }
+
+      const aiColor = getAiColor();
+      if (aiColor && chess.turn() === aiColor) {
+        scheduleBotMove();
+      }
+    }
+
+    function scheduleBotMove() {
+      aiThinking = true;
+      const aiColor = getAiColor();
+      const delayMs = 550 + Math.random() * 450;
+
+      aiTimeoutId = setTimeout(() => {
+        if (chess.game_over() || !matchStarted || chess.turn() !== aiColor) {
+          aiThinking = false;
+          return;
+        }
+        const t0 = performance.now();
+        const chosen = computeBestBotMove(currentSession.opponent.oll, aiColor);
+        const elapsed = (performance.now() - t0) / 1000;
+
+        if (!unlimitedClock && elapsed > 0.05) {
+          if (aiColor === "w") whiteTimeSec = Math.max(0, whiteTimeSec - elapsed);
+          else blackTimeSec = Math.max(0, blackTimeSec - elapsed);
+          lastTickPerf = performance.now();
+        }
+
+        aiThinking = false;
+        if (chosen) commitMove(chosen);
+      }, delayMs);
+    }
+
+    function analyzeMoveStyle(move) {
+      let dAgg = 0, dDef = 0;
+      if (move.captured) dAgg += 6;
+      if (chess.in_check()) dAgg += 7;
+      if (["e4","d4","e5","d5","f4","c4"].includes(move.to)) dAgg += 3;
+      if (move.flags.includes("k") || move.flags.includes("q")) dDef += 9;
+      if (!move.captured && ["1","2","7","8"].includes(move.to[1])) dDef += 2;
+
+      aggPercent = Math.max(15, Math.min(95, Math.round(aggPercent + dAgg - dDef * 0.25)));
+      defPercent = Math.max(15, Math.min(95, Math.round(defPercent + dDef - dAgg * 0.25)));
+      updateStyleBars();
+    }
+
+    function getPlayerStyleBadge() {
+      const tier = getTierByOll(profile.oll);
+      if (profile.oll >= 2251 && profile.oll <= 2600) {
+        if (Math.abs(aggPercent - defPercent) <= 18) return { code: "IM", label: "IM • ผสมผสาน" };
+        if (aggPercent > defPercent) return { code: "CM", label: "CM • เกมบุก" };
+        return { code: "FM", label: "FM • เกมรับ" };
+      }
+      return { code: tier.badge, label: `${tier.badge} • ${tier.name}` };
+    }
+
+    function updateStyleBars() {
+      document.getElementById("aggVal").textContent = `${aggPercent}%`;
+      document.getElementById("aggBar").style.width = `${aggPercent}%`;
+      document.getElementById("defVal").textContent = `${defPercent}%`;
+      document.getElementById("defBar").style.width = `${defPercent}%`;
+      const st = getPlayerStyleBadge();
+      document.getElementById("styleBadgeText").textContent = st.label;
+      document.getElementById("botSideTitleBadge").textContent = st.code;
+    }
+
+    // =========================================================================
+    // 10. MINIMAX + ALPHA-BETA FOR BOTH WHITE & BLACK BOT SIDES
+    // =========================================================================
+    function evaluateBoard(boardObj) {
+      if (boardObj.in_checkmate()) return boardObj.turn() === "w" ? -999999 : 999999;
+      if (boardObj.in_draw() || boardObj.in_stalemate() || boardObj.in_threefold_repetition()) return 0;
+      const grid = boardObj.board();
+      let score = 0;
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const p = grid[r][c];
+          if (!p) continue;
+          const base = PIECE_VAL[p.type] || 0;
+          const row = p.color === "w" ? r : 7 - r;
+          const pos = PST[p.type] ? PST[p.type][row][c] : 0;
+          score += p.color === "w" ? (base + pos) : -(base + pos);
+        }
+      }
+      return score;
+    }
+
+    function sortMoves(moves) {
+      return moves.sort((a, b) => {
+        const sA = (a.captured ? 10 * (PIECE_VAL[a.captured] || 100) - (PIECE_VAL[a.piece] || 100) : 0) + (a.promotion ? 800 : 0) + (a.san.includes("+") ? 120 : 0);
+        const sB = (b.captured ? 10 * (PIECE_VAL[b.captured] || 100) - (PIECE_VAL[b.piece] || 100) : 0) + (b.promotion ? 800 : 0) + (b.san.includes("+") ? 120 : 0);
+        return sB - sA;
+      });
+    }
+
+    function alphaBetaSearch(boardObj, depth, alpha, beta, isMax) {
+      if (depth === 0 || boardObj.game_over()) return evaluateBoard(boardObj);
+      const moves = sortMoves(boardObj.moves({ verbose: true }));
+      if (isMax) {
+        let best = -Infinity;
+        for (const m of moves) {
+          boardObj.move(m);
+          const v = alphaBetaSearch(boardObj, depth - 1, alpha, beta, false);
+          boardObj.undo();
+          if (v > best) best = v;
+          if (v > alpha) alpha = v;
+          if (beta <= alpha) break;
+        }
+        return best;
+      } else {
+        let best = Infinity;
+        for (const m of moves) {
+          boardObj.move(m);
+          const v = alphaBetaSearch(boardObj, depth - 1, alpha, beta, true);
+          boardObj.undo();
+          if (v < best) best = v;
+          if (v < beta) beta = v;
+          if (beta <= alpha) break;
+        }
+        return best;
+      }
+    }
+
+    function computeBestBotMove(botOll, aiColor) {
+      const moves = chess.moves({ verbose: true });
+      if (!moves.length) return null;
+      if (botOll <= 400 && Math.random() < 0.65) {
+        return moves[Math.floor(Math.random() * moves.length)];
+      }
+
+      const depth = botOll <= 900 ? 1 : botOll <= 1850 ? 2 : 3;
+      const noise = botOll <= 900 ? 130 : botOll <= 1850 ? 50 : botOll <= 2600 ? 12 : 0;
+      const maxForBot = aiColor === "w";
+      const ordered = sortMoves(moves);
+
+      let bestMove = ordered[0];
+      let bestVal = maxForBot ? -Infinity : Infinity;
+
+      for (const m of ordered) {
+        chess.move(m);
+        const val = alphaBetaSearch(chess, depth - 1, -Infinity, Infinity, !maxForBot);
+        chess.undo();
+        const jitter = noise > 0 ? (Math.random() - 0.5) * noise : 0;
+        const scoreWithJitter = val + jitter;
+        if (maxForBot ? scoreWithJitter > bestVal : scoreWithJitter < bestVal) {
+          bestVal = scoreWithJitter;
+          bestMove = m;
+        }
+      }
+      return bestMove;
+    }
+
+    // =========================================================================
+    // 11. MATCH RESULT (NEVER DEDUCTS OLL IN BOT MATCHES)
+    // =========================================================================
+    function concludeMatch(reason = null) {
+      stopMatchClock();
+      if (aiTimeoutId) clearTimeout(aiTimeoutId);
+      aiThinking = false;
+
+      const pColor = currentSession ? currentSession.playerColor : "w";
+      const oppColor = pColor === "w" ? "b" : "w";
+
+      let outcome = "draw";
+      let badge = "เสมอ";
+      let title = "เสมอกัน";
+      let desc = "จบการแข่งขันแบบเสมอ";
+
+      if (reason === "resign") {
+        outcome = "loss";
+        badge = "ยอมแพ้";
+        title = "ยอมแพ้การแข่งขัน";
+        desc = "คุณกดยอมแพ้";
+      } else if (reason === "timeout_w") {
+        outcome = pColor === "b" ? "win" : "loss";
+        badge = outcome === "win" ? "ชัยชนะ" : "หมดเวลา";
+        title = outcome === "win" ? "ฝ่ายขาวหมดเวลา!" : "เวลาฝั่งขาวหมด!";
+        desc = outcome === "win" ? "คุณชนะเพราะฝ่ายตรงข้ามหมดเวลา" : "เวลาหมดก่อนจบเกม";
+      } else if (reason === "timeout_b") {
+        outcome = pColor === "w" ? "win" : "loss";
+        badge = outcome === "win" ? "ชัยชนะ" : "หมดเวลา";
+        title = outcome === "win" ? "ฝ่ายดำหมดเวลา!" : "เวลาฝั่งดำหมด!";
+        desc = outcome === "win" ? "คุณชนะเพราะฝ่ายตรงข้ามหมดเวลา" : "เวลาหมดก่อนจบเกม";
+      } else if (chess.in_checkmate()) {
+        if (chess.turn() === oppColor) {
+          outcome = "win";
+          badge = "ชัยชนะ";
+          title = "รุกฆาตสำเร็จ!";
+          desc = `คุณรุกฆาต ${currentSession.opponent.name} ได้สำเร็จ`;
+        } else {
+          outcome = "loss";
+          badge = "พ่ายแพ้";
+          title = "ถูกรุกฆาต";
+          desc = `${currentSession.opponent.name} รุกฆาตคุณ`;
+        }
+      }
+
+      // Bot rating rule: NEVER deduct OLL on loss or draw (only award on win).
+      let delta = 0;
+      if (currentSession && currentSession.mode === "bot" && currentSession.rated && outcome === "win") {
+        const diffFactor = Math.max(8, Math.min(32, Math.round(16 + (currentSession.opponent.oll - profile.oll) / 80)));
+        delta = diffFactor;
+        profile.oll = Math.max(0, profile.oll + delta);
+        if (profile.oll > profile.peakOll) profile.peakOll = profile.oll;
+      }
+
+      if (outcome === "win") profile.wins += 1;
+      else if (outcome === "loss") profile.losses += 1;
+      else profile.draws += 1;
+
+      profile.history.unshift({
+        opponentName: currentSession.opponent.name,
+        opponentAvatar: currentSession.opponent.avatar,
+        opponentOll: currentSession.opponent.oll,
+        result: outcome,
+        delta,
+        isBot: currentSession.mode === "bot",
+        timeLabel: currentSession.timeLabel,
+        movesCount: chess.history().length,
+        dateLabel: new Date().toLocaleDateString("th-TH", { day: "numeric", month: "short" })
+      });
+      if (profile.history.length > 30) profile.history.pop();
+      saveAccountsStore();
+      syncHeaderUser();
+
+      const resBadge = document.getElementById("resBadge");
+      resBadge.textContent = badge;
+      resBadge.className = outcome === "win"
+        ? "inline-block px-3 py-1 rounded-full text-xs font-black bg-[#81b64c]/20 text-[#81b64c]"
+        : outcome === "loss"
+        ? "inline-block px-3 py-1 rounded-full text-xs font-black bg-red-600/20 text-red-400"
+        : "inline-block px-3 py-1 rounded-full text-xs font-black bg-stone-600/30 text-stone-300";
+
+      document.getElementById("resTitle").textContent = title;
+      document.getElementById("resDesc").textContent = desc;
+      document.getElementById("resNewOll").textContent = `${profile.oll}`;
+
+      const dEl = document.getElementById("resDeltaOll");
+      if (currentSession.mode === "bot") {
+        dEl.textContent = delta > 0 ? `+${delta} OLL` : "+0 OLL (ไม่หักแต้ม)";
+        dEl.className = delta > 0 ? "text-lg font-black font-mono-num text-[#81b64c] mt-0.5" : "text-xs font-black text-stone-300 mt-1";
+      } else {
+        dEl.textContent = currentSession.mode === "online_room" ? "Room v0.01" : "Custom / Friend";
+        dEl.className = "text-xs font-black text-sky-300 mt-1";
+      }
+
+      document.getElementById("arenaStatusBadge").textContent = badge;
+      openModal("gameOverModal");
+    }
+
+    function flipBoardView() {
+      boardFlipped = !boardFlipped;
+      renderBoard();
+    }
+
+    function undoTurn() {
+      if (aiThinking || chess.history().length === 0) return;
+      if (currentSession && currentSession.mode === "online_room") return;
+      const aiColor = getAiColor();
+      chess.undo();
+      if (aiColor && chess.turn() === aiColor && chess.history().length > 0) chess.undo();
+      lastMoveInfo = null;
+      selectedSq = null;
+      legalMoves = [];
+      renderBoard();
+    }
+
+    function resignMatch() {
+      if (chess.game_over()) return;
+      concludeMatch("resign");
+    }
+
+    function renderMoveLog() {
+      const box = document.getElementById("moveHistoryBox");
+      const hist = chess.history();
+      document.getElementById("moveCounterLabel").textContent = `ตาที่ ${Math.ceil((hist.length + 1) / 2)}`;
+      if (!hist.length) {
+        box.innerHTML = `<div class="text-stone-500 text-center py-8">เริ่มเดินหมากบนกระดาน</div>`;
+        return;
+      }
+      let html = "";
+      for (let i = 0; i < hist.length; i += 2) {
+        const turnNo = i / 2 + 1;
+        html += `
+          <div class="grid grid-cols-12 px-2 py-1 rounded ${turnNo % 2 === 0 ? "bg-[#2b2926]" : ""}">
+            <span class="col-span-2 text-stone-500">${turnNo}.</span>
+            <span class="col-span-5 text-white font-bold">${hist[i]}</span>
+            <span class="col-span-5 text-stone-300 font-bold">${hist[i + 1] || ""}</span>
+          </div>
+        `;
+      }
+      box.innerHTML = html;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function renderCapturedPieces() {
+      const map = { p: "♟", n: "♞", b: "♝", r: "♜", q: "♛" };
+      const wCap = [], bCap = [];
+      chess.history({ verbose: true }).forEach(m => {
+        if (m.captured) {
+          if (m.color === "w") wCap.push(map[m.captured]);
+          else bCap.push(map[m.captured]);
+        }
+      });
+      if (currentSession && currentSession.playerColor === "b") {
+        document.getElementById("botSideCapturedText").textContent = bCap.join("");
+        document.getElementById("topCapturedText").textContent = wCap.join("");
+      } else {
+        document.getElementById("botSideCapturedText").textContent = wCap.join("");
+        document.getElementById("topCapturedText").textContent = bCap.join("");
+      }
+    }
+
+    // =========================================================================
+    // 12. NAVIGATION, RANKING, PROFILE & ACCOUNT RENDERERS
+    // =========================================================================
+    function navigateTo(view) {
+      ["viewHome", "viewCustom", "viewArena", "viewRanking", "viewProfile"].forEach(id => {
+        document.getElementById(id).classList.add("hidden");
+      });
+
+      if (view === "home") {
+        stopMatchClock();
+        document.getElementById("viewHome").classList.remove("hidden");
+      } else if (view === "custom") {
+        stopMatchClock();
+        document.getElementById("viewCustom").classList.remove("hidden");
+        renderCustomEditorBoard();
+      } else if (view === "arena") {
+        document.getElementById("viewArena").classList.remove("hidden");
+        renderBoard();
+      } else if (view === "ranking") {
+        stopMatchClock();
+        document.getElementById("viewRanking").classList.remove("hidden");
+        renderRankingView();
+      } else if (view === "profile") {
+        stopMatchClock();
+        document.getElementById("viewProfile").classList.remove("hidden");
+        renderProfileView();
+      }
+      syncHeaderUser();
+    }
+
+    function syncHeaderUser() {
+      document.getElementById("hdrAvatar").textContent = profile.avatar;
+      document.getElementById("hdrUsername").textContent = profile.username;
+      document.getElementById("hdrPlayerId").textContent = profile.id;
+      document.getElementById("hdrOll").textContent = `${profile.oll} OLL`;
+    }
+
+    function switchRankSubTab(tab) {
+      const tBtn = document.getElementById("rankTabTiers");
+      const lBtn = document.getElementById("rankTabLeader");
+      const tPanel = document.getElementById("rankPanelTiers");
+      const lPanel = document.getElementById("rankPanelLeader");
+
+      if (tab === "tiers") {
+        tBtn.className = "py-2 rounded-lg text-xs font-black bg-[#81b64c] text-white";
+        lBtn.className = "py-2 rounded-lg text-xs font-bold text-stone-300";
+        tPanel.classList.remove("hidden");
+        lPanel.classList.add("hidden");
+      } else {
+        lBtn.className = "py-2 rounded-lg text-xs font-black bg-[#81b64c] text-white";
+        tBtn.className = "py-2 rounded-lg text-xs font-bold text-stone-300";
+        lPanel.classList.remove("hidden");
+        tPanel.classList.add("hidden");
+      }
+    }
+
+    function renderRankingView() {
+      document.getElementById("tiers15List").innerHTML = [...OLL_TIERS].reverse().map(t => {
+        const range = t.max > 9000 ? `${t.min}+ OLL` : `${t.min}–${t.max} OLL`;
+        const isMe = profile.oll >= t.min && profile.oll <= t.max;
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl border ${isMe ? "bg-[#2a3522] border-[#81b64c]" : "bg-[#181715] border-[#302e29]"}">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="px-1.5 py-0.5 text-[10px] font-black rounded ${t.color} shrink-0">${t.badge}</span>
+              <div class="truncate">
+                <div class="text-xs font-bold text-white truncate">${t.name} ${isMe ? '<span class="text-[#81b64c] text-[10px]">(คุณ)</span>' : ""}</div>
+                ${t.note ? `<div class="text-[10px] text-amber-400 truncate">${t.note}</div>` : ""}
+              </div>
+            </div>
+            <span class="font-mono-num text-[11px] font-bold text-stone-300 shrink-0 ml-2">${range}</span>
+          </div>
+        `;
+      }).join("");
+
+      const sortedAccounts = [...accountsState.accounts].sort((a, b) => b.oll - a.oll);
+      document.getElementById("leaderboardList").innerHTML = sortedAccounts.map((acc, idx) => {
+        const tier = getTierByOll(acc.oll);
+        const isCurrent = acc.id === profile.id;
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl border ${isCurrent ? "bg-[#2a3522] border-[#81b64c]" : "bg-[#181715] border-[#302e29]"}">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-6 text-center font-mono-num text-xs font-black text-amber-400">#${idx + 1}</span>
+              <span class="text-lg">${acc.avatar}</span>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="px-1.5 py-0.5 text-[10px] font-black rounded ${tier.color}">${tier.badge}</span>
+                  <span class="text-xs font-extrabold text-white truncate">${acc.username}</span>
+                  <span class="text-[10px] font-mono-num text-sky-300">${acc.id}</span>
+                </div>
+                <div class="text-[10px] text-stone-400">${tier.name}</div>
+              </div>
+            </div>
+            <span class="font-mono-num text-xs sm:text-sm font-black text-[#81b64c]">${acc.oll} OLL</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderProfileView() {
+      const tier = getTierByOll(profile.oll);
+      document.getElementById("profileAvatarLarge").textContent = profile.avatar;
+      document.getElementById("profileUsernameDisplay").textContent = profile.username;
+      document.getElementById("profilePlayerIdBadge").textContent = profile.id;
+      document.getElementById("profileTitleBadge").textContent = getPlayerStyleBadge().code;
+      document.getElementById("profileTierPill").textContent = tier.name;
+      document.getElementById("profileTaglineDisplay").textContent = profile.tagline;
+
+      document.getElementById("accountSwitcherSelect").innerHTML = accountsState.accounts.map(acc => `
+        <option value="${acc.id}" ${acc.id === profile.id ? "selected" : ""}>${acc.avatar} ${acc.username} (${acc.id}) — ${acc.oll} OLL</option>
+      `).join("");
+
+      document.getElementById("statStreakDays").textContent = `${profile.streakDays} วัน`;
+      document.getElementById("statRecordSummary").textContent = `${profile.wins}W - ${profile.losses}L`;
+      document.getElementById("statPeakOll").textContent = `${profile.peakOll}`;
+
+      document.getElementById("profileCurrentOll").innerHTML = `${profile.oll} <span class="text-xs text-[#81b64c]">OLL</span>`;
+      document.getElementById("profileCurrentTierDetail").textContent = `ช่วง ${tier.min}–${tier.max > 9000 ? "∞" : tier.max} • ${tier.name}`;
+
+      let unlocked = 0;
+      document.getElementById("awardsListGrid").innerHTML = AWARDS_CATALOG.map(aw => {
+        const isUnlocked = aw.check(profile);
+        if (isUnlocked) unlocked++;
+        return `
+          <div class="p-2.5 rounded-xl border text-center ${isUnlocked ? "bg-[#2a3522] border-[#81b64c]/60" : "bg-[#181715] border-[#2f2d28] opacity-55"}">
+            <div class="text-xl mb-1">${aw.icon}</div>
+            <div class="text-[11px] font-bold text-white truncate">${aw.title}</div>
+            <div class="text-[10px] ${isUnlocked ? "text-[#81b64c]" : "text-stone-500"} mt-0.5">${isUnlocked ? "ปลดล็อกแล้ว" : "ล็อกอยู่"}</div>
+          </div>
+        `;
+      }).join("");
+      document.getElementById("awardsUnlockedCount").textContent = `${unlocked} / ${AWARDS_CATALOG.length}`;
+
+      const listEl = document.getElementById("gameHistoryList");
+      document.getElementById("historyCountBadge").textContent = `${profile.history.length}`;
+
+      if (!profile.history.length) {
+        listEl.innerHTML = `<div class="text-xs text-stone-500 text-center py-6 bg-[#181715] rounded-xl border border-[#2f2d28]">ยังไม่มีประวัติการแข่งขันของบัญชีนี้</div>`;
+        return;
+      }
+
+      listEl.innerHTML = profile.history.map(item => {
+        const badgeBg = item.result === "win" ? "bg-[#81b64c] text-white" : item.result === "loss" ? "bg-red-600 text-white" : "bg-stone-600 text-white";
+        const char = item.result === "win" ? "W" : item.result === "loss" ? "L" : "D";
+        const deltaText = !item.isBot ? "Match" : item.delta > 0 ? `+${item.delta}` : "+0";
+        const deltaColor = item.delta > 0 ? "text-[#81b64c]" : "text-stone-400";
+
+        return `
+          <div class="flex items-center justify-between bg-[#181715] px-3 py-2.5 rounded-xl border border-[#302e29]">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-lg bg-[#2b2926] flex items-center justify-center text-lg shrink-0">${item.opponentAvatar || "♟️"}</div>
+              <div class="min-w-0">
+                <div class="text-xs font-extrabold text-white truncate">${item.opponentName} <span class="font-mono-num text-stone-400 font-normal">(${item.opponentOll})</span></div>
+                <div class="text-[10px] text-stone-400 mt-0.5">${item.dateLabel} • ${item.timeLabel} • ${item.movesCount} ตา</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2.5 shrink-0">
+              <span class="text-xs font-mono-num font-bold ${deltaColor}">${deltaText}</span>
+              <span class="w-6 h-6 rounded-md ${badgeBg} font-mono-num text-xs font-black flex items-center justify-center">${char}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    let pickedAvatarTemp = null;
+    function openEditProfileModal() {
+      pickedAvatarTemp = profile.avatar;
+      document.getElementById("editAccountIdLabel").textContent = `ID: ${profile.id}`;
+      document.getElementById("inputNickname").value = profile.username;
+      document.getElementById("inputTagline").value = profile.tagline;
+      document.getElementById("inputOllRating").value = profile.oll;
+      document.getElementById("avatarPickerGrid").innerHTML = AVATAR_CHOICES.map(av => `
+        <button type="button" onclick="pickAvatarModal('${av}')" data-av="${av}" class="av-opt h-10 rounded-xl flex items-center justify-center text-xl border ${profile.avatar === av ? "bg-[#81b64c]/25 border-[#81b64c]" : "bg-[#181715] border-[#383630]"}">${av}</button>
+      `).join("");
+      openModal("editProfileModal");
+    }
+
+    function pickAvatarModal(av) {
+      pickedAvatarTemp = av;
+      document.querySelectorAll(".av-opt").forEach(b => {
+        b.className = `av-opt h-10 rounded-xl flex items-center justify-center text-xl border ${b.dataset.av === av ? "bg-[#81b64c]/25 border-[#81b64c]" : "bg-[#181715] border-[#383630]"}`;
+      });
+    }
+
+    function saveProfileChanges() {
+      const nick = document.getElementById("inputNickname").value.trim();
+      const tag = document.getElementById("inputTagline").value.trim();
+      const ollV = parseInt(document.getElementById("inputOllRating").value, 10);
+      if (nick) profile.username = nick;
+      if (tag) profile.tagline = tag;
+      if (!Number.isNaN(ollV) && ollV >= 0 && ollV <= 4000) {
+        profile.oll = ollV;
+        if (profile.oll > profile.peakOll) profile.peakOll = profile.oll;
+      }
+      if (pickedAvatarTemp) profile.avatar = pickedAvatarTemp;
+      saveAccountsStore();
+      syncHeaderUser();
+      renderProfileView();
+      renderRankingView();
+      closeModal("editProfileModal");
+    }
+
+    function clearHistoryData() {
+      profile.history = [];
+      profile.wins = 0;
+      profile.losses = 0;
+      profile.draws = 0;
+      saveAccountsStore();
+      renderProfileView();
+    }
+
+    function openSettingsModal() {
+      renderLanguageButtons();
+      openModal("settingsModal");
+    }
+
+    function setBoardTheme(theme) {
+      boardTheme = theme;
+      renderBoard();
+      renderCustomEditorBoard();
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove("hidden"); }
+    function closeModal(id) { document.getElementById(id).classList.add("hidden"); }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const botOptionsHtml = BOT_ROSTER.map((b, i) => {
+        const t = getTierByOll(b.oll);
+        return `<option value="${i}" ${b.oll === 3310 ? "selected" : ""}>${b.avatar} ${b.name} — ${b.oll} OLL (${t.name})</option>`;
+      }).join("");
+
+      document.getElementById("botModalSelect").innerHTML = botOptionsHtml;
+      document.getElementById("customBotSelect").innerHTML = botOptionsHtml;
+
+      initRoomBroadcastChannel();
+      initCustomEditor();
+      setAppLanguage("th");
+      syncHeaderUser();
+    });
+  </script>
+</body>
+</html>
